@@ -1,8 +1,11 @@
 import Button from '../components/Button'
 import Card from '../components/Card'
 import Input from '../components/Input'
+import { useVault } from './VaultContext'
 
 export default function VaultUnlock() {
+  const { setVaultStatus } = useVault()
+
   return (
     <div className="space-y-8">
       <header className="space-y-2">
@@ -16,7 +19,7 @@ export default function VaultUnlock() {
         <div className="space-y-4">
           <Input type="password" placeholder="Passphrase" />
           <div className="flex flex-wrap gap-3">
-            <Button>Unlock</Button>
+            <Button onClick={() => setVaultStatus('unlocked')}>Unlock</Button>
             <Button variant="outline">Use another vault</Button>
           </div>
         </div>

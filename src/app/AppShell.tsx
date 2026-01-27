@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
+import { useVault } from './VaultContext'
 
 const navItems = [
   { label: 'Landing', to: '/' },
@@ -13,8 +14,40 @@ const linkBase =
   'rounded-full px-3 py-1 text-xs font-medium transition hover:bg-sand-100 hover:text-sand-900'
 
 export default function AppShell() {
+  const { vaultStatus, idleTimeoutMs, setVaultStatus } = useVault()
+  const isLocked = vaultStatus === 'locked'
+  const idleMinutes = Math.round(idleTimeoutMs / 60000)
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#ffffff_0%,_#f6f1e7_45%,_#e8ddcc_100%)]">
+      <div className="border-b border-sand-200 bg-sand-50">
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-2 text-xs">
+          <div className="flex items-center gap-3">
+            <span
+              className={[
+                'rounded-full px-2 py-1 font-semibold tracking-[0.2em]',
+                isLocked
+                  ? 'bg-sand-900 text-white'
+                  : 'bg-emerald-100 text-emerald-900',
+              ].join(' ')}
+            >
+              {vaultStatus.toUpperCase()}
+            </span>
+            <span className="text-sand-600">
+              Auto-lock after {idleMinutes} min idle (placeholder)
+            </span>
+          </div>
+          {!isLocked && (
+            <button
+              type="button"
+              className="rounded-full border border-sand-200 px-3 py-1 text-xs font-medium text-sand-700 transition hover:border-sand-400"
+              onClick={() => setVaultStatus('locked')}
+            >
+              Lock now
+            </button>
+          )}
+        </div>
+      </div>
       <header className="border-b border-sand-200 bg-white/80 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
           <div className="flex flex-col">

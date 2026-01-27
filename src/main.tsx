@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './app/App'
+import { VaultProvider } from './app/VaultContext'
 import './style.css'
 
 const root = document.getElementById('root')
@@ -13,7 +14,9 @@ if (!root) {
 createRoot(root).render(
   <StrictMode>
     <BrowserRouter>
-      <App />
+      <VaultProvider>
+        <App />
+      </VaultProvider>
     </BrowserRouter>
   </StrictMode>
 )
