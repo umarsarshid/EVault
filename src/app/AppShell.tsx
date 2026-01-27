@@ -26,7 +26,7 @@ const getInitialTheme = (): ThemeMode => {
 }
 
 export default function AppShell() {
-  const { vaultStatus, idleTimeoutMs, setVaultStatus } = useVault()
+  const { vaultStatus, idleTimeoutMs, lockVault } = useVault()
   const isLocked = vaultStatus === 'locked'
   const idleMinutes = Math.round(idleTimeoutMs / 60000)
   const [theme, setTheme] = useState<ThemeMode>(() => getInitialTheme())
@@ -62,9 +62,9 @@ export default function AppShell() {
               <button
                 type="button"
                 className="rounded-full border border-sand-200 px-3 py-1 text-xs font-medium text-sand-700 transition hover:border-sand-400 dark:border-sand-700 dark:text-sand-300 dark:hover:border-sand-500"
-                onClick={() => setVaultStatus('locked')}
+                onClick={lockVault}
               >
-                Lock now
+                Lock
               </button>
             )}
             <button

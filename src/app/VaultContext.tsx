@@ -12,7 +12,10 @@ type VaultStatus = 'locked' | 'unlocked'
 
 type VaultContextValue = {
   vaultStatus: VaultStatus
+  vaultKey: Uint8Array | null
+  setVaultKey: (key: Uint8Array | null) => void
   setVaultStatus: (status: VaultStatus) => void
+  lockVault: () => void
   idleTimeoutMs: number
   lastActivityAt: number
   resetIdleTimer: () => void
@@ -25,11 +28,24 @@ const activityEvents = ['pointerdown', 'keydown', 'mousemove', 'touchstart', 'fo
 
 export function VaultProvider({ children }: { children: ReactNode }) {
   const [vaultStatus, setVaultStatus] = useState<VaultStatus>('locked')
+  const [vaultKey, setVaultKeyState] = useState<Uint8Array | null>(null)
   const [lastActivityAt, setLastActivityAt] = useState(() => Date.now())
 
   const resetIdleTimer = useCallback(() => {
     setLastActivityAt(Date.now())
   }, [])
+
+  const setVaultKey = useCallback((key: Uint8Array | null) => {
+    setVaultKeyState(key)
+  }, [])
+
+  const lockVault = useCallback(() => {
+    if (vaultKey) {
+      vaultKey.fill(0)
+    }
+    setVaultKeyState(null)
+    setVaultStatus('locked')
+  }, [vaultKey])
 
   useEffect(() => {
     const handleActivity = () => resetIdleTimer()
@@ -50,21 +66,24 @@ export function VaultProvider({ children }: { children: ReactNode }) {
 
     // Placeholder auto-lock: after inactivity, return to locked state.
     const timeoutId = window.setTimeout(() => {
-      setVaultStatus('locked')
+      lockVault()
     }, IDLE_TIMEOUT_MS)
 
     return () => window.clearTimeout(timeoutId)
-  }, [vaultStatus, lastActivityAt])
+  }, [vaultStatus, lastActivityAt, lockVault])
 
   const value = useMemo(
     () => ({
       vaultStatus,
+      vaultKey,
+      setVaultKey,
       setVaultStatus,
+      lockVault,
       idleTimeoutMs: IDLE_TIMEOUT_MS,
       lastActivityAt,
       resetIdleTimer,
     }),
-    [vaultStatus, lastActivityAt, resetIdleTimer]
+    [vaultStatus, vaultKey, setVaultKey, lockVault, lastActivityAt, resetIdleTimer]
   )
 
   return <VaultContext.Provider value={value}>{children}</VaultContext.Provider>

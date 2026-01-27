@@ -67,9 +67,50 @@ export async function createVault({ vaultName, passphrase }: CreateVaultInput) {
 
   await db.vault_meta.put(vaultMeta)
 
+  const vaultKeyCopy = vaultKey.slice()
   sodium.memzero(masterKey)
   sodium.memzero(vaultKey)
   sodium.memzero(signingKeypair.privateKey)
 
-  return vaultMeta
+  return { vaultMeta, vaultKey: vaultKeyCopy }
+}
+
+type UnlockVaultResult = {
+  vaultMeta: VaultMeta
+  vaultKey: Uint8Array
+}
+
+export async function unlockVault(passphrase: string): Promise<UnlockVaultResult> {
+  const sodium = await getSodium()
+  const vaultMeta = await db.vault_meta.get('primary')
+
+  if (!vaultMeta?.salt || !vaultMeta.kdfParams || !vaultMeta.wrappedVaultKey) {
+    throw new Error('Vault metadata is missing')
+  }
+
+  const salt = sodium.from_base64(vaultMeta.salt, sodium.base64_variants.ORIGINAL)
+  const { opslimit, memlimit, keyBytes } = vaultMeta.kdfParams
+  const alg = sodium.crypto_pwhash_ALG_ARGON2ID13
+
+  const masterKey = sodium.crypto_pwhash(keyBytes, passphrase, salt, opslimit, memlimit, alg)
+  const nonce = sodium.from_base64(
+    vaultMeta.wrappedVaultKey.nonce,
+    sodium.base64_variants.ORIGINAL
+  )
+  const cipher = sodium.from_base64(
+    vaultMeta.wrappedVaultKey.cipher,
+    sodium.base64_variants.ORIGINAL
+  )
+
+  try {
+    const vaultKey = sodium.crypto_secretbox_open_easy(cipher, nonce, masterKey)
+    if (!vaultKey) {
+      throw new Error('Invalid passphrase')
+    }
+    return { vaultMeta, vaultKey }
+  } catch (error) {
+    throw new Error('Invalid passphrase')
+  } finally {
+    sodium.memzero(masterKey)
+  }
 }
