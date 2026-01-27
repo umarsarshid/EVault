@@ -3,6 +3,7 @@ import Button from '../components/Button'
 import Card from '../components/Card'
 import { db, type EvidenceItem } from '../db'
 import { appendCustodyEvent } from '../custody'
+import { buildExportManifest, type ExportManifest } from '../export/manifest'
 import { useVault } from './VaultContext'
 
 type OutputMode = 'review' | 'encrypted'
@@ -20,6 +21,16 @@ const formatDate = (timestamp: number) =>
     timeStyle: 'short',
   })
 
+const downloadTextFile = (filename: string, content: string, mimeType: string) => {
+  const blob = new Blob([content], { type: mimeType })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
 export default function Export() {
   const { vaultStatus, vaultKey } = useVault()
   const [items, setItems] = useState<EvidenceItem[]>([])
@@ -30,6 +41,10 @@ export default function Export() {
   const [outputMode, setOutputMode] = useState<OutputMode>('review')
   const [message, setMessage] = useState<string | null>(null)
   const [isExporting, setIsExporting] = useState(false)
+  const [isBuildingManifest, setIsBuildingManifest] = useState(false)
+  const [manifestInfo, setManifestInfo] = useState<ExportManifest | null>(null)
+  const [manifestJson, setManifestJson] = useState<string | null>(null)
+  const [manifestCsv, setManifestCsv] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -51,6 +66,12 @@ export default function Export() {
     }
   }, [])
 
+  useEffect(() => {
+    setManifestInfo(null)
+    setManifestJson(null)
+    setManifestCsv(null)
+  }, [selectedIds, includeOriginals, includeRedacted, includeMetadata, outputMode])
+
   const selectedItems = useMemo(
     () => items.filter((item) => selectedIds.includes(item.id)),
     [items, selectedIds]
@@ -64,6 +85,53 @@ export default function Export() {
 
   const selectAll = () => setSelectedIds(items.map((item) => item.id))
   const clearAll = () => setSelectedIds([])
+
+  const handleBuildManifest = async () => {
+    if (vaultStatus !== 'unlocked' || !vaultKey) {
+      setMessage('Unlock the vault before exporting.')
+      return
+    }
+
+    if (selectedItems.length === 0) {
+      setMessage('Select at least one item to export.')
+      return
+    }
+
+    if (!includeOriginals && !includeRedacted && !includeMetadata) {
+      setMessage('Choose at least one export component.')
+      return
+    }
+
+    setIsBuildingManifest(true)
+    setMessage(null)
+
+    try {
+      const exportId = createExportId()
+      const { manifest, json, csv } = await buildExportManifest({
+        exportId,
+        items: selectedItems,
+        includeOriginals,
+        includeRedacted,
+        includeMetadata,
+        outputMode,
+        vaultKey,
+      })
+
+      setManifestInfo(manifest)
+      setManifestJson(json)
+      setManifestCsv(csv)
+      setMessage(
+        manifest.files.length === 0
+          ? 'Manifest generated, but it contains 0 files.'
+          : 'Manifest generated.'
+      )
+    } catch (err) {
+      console.error(err)
+      setMessage('Failed to build manifest.')
+    } finally {
+      setIsBuildingManifest(false)
+    }
+  }
 
   const handleExport = async () => {
     if (vaultStatus !== 'unlocked' || !vaultKey) {
@@ -251,14 +319,65 @@ export default function Export() {
               <Button onClick={handleExport} disabled={isExporting}>
                 {isExporting ? 'Building…' : 'Build ZIP bundle'}
               </Button>
-              <Button variant="outline" disabled={selectedItems.length === 0}>
-                Review manifest
+              <Button
+                variant="outline"
+                onClick={handleBuildManifest}
+                disabled={isBuildingManifest || selectedItems.length === 0}
+              >
+                {isBuildingManifest ? 'Preparing…' : 'Review manifest'}
               </Button>
             </div>
             {message && (
               <p className="mt-3 text-xs text-sand-600 dark:text-sand-400">{message}</p>
             )}
           </Card>
+
+          {manifestInfo && manifestJson && manifestCsv && (
+            <Card
+              title="Manifest preview"
+              description="Explicit, human-readable hashes and metadata for export review."
+            >
+              <div className="space-y-4">
+                <div className="text-xs text-sand-600 dark:text-sand-400">
+                  Export ID: {manifestInfo.exportId} · {manifestInfo.files.length} files
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      downloadTextFile(
+                        `manifest-${manifestInfo.exportId}.json`,
+                        manifestJson,
+                        'application/json'
+                      )
+                    }
+                  >
+                    Download manifest.json
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      downloadTextFile(
+                        `manifest-${manifestInfo.exportId}.csv`,
+                        manifestCsv,
+                        'text/csv'
+                      )
+                    }
+                  >
+                    Download manifest.csv
+                  </Button>
+                </div>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <pre className="max-h-80 overflow-auto rounded-2xl border border-sand-200 bg-white/70 p-4 text-xs text-sand-700 dark:border-sand-700 dark:bg-sand-900/70 dark:text-sand-200">
+                    {manifestJson}
+                  </pre>
+                  <pre className="max-h-80 overflow-auto rounded-2xl border border-sand-200 bg-white/70 p-4 text-xs text-sand-700 dark:border-sand-700 dark:bg-sand-900/70 dark:text-sand-200">
+                    {manifestCsv}
+                  </pre>
+                </div>
+              </div>
+            </Card>
+          )}
         </div>
       </div>
     </div>
