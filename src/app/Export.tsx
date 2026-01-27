@@ -3,6 +3,7 @@ import Button from '../components/Button'
 import Card from '../components/Card'
 import { db, type EvidenceItem } from '../db'
 import { appendCustodyEvent } from '../custody'
+import { buildCustodyLog } from '../export/custodyLog'
 import { buildExportManifest, type ExportManifest } from '../export/manifest'
 import { useVault } from './VaultContext'
 
@@ -45,6 +46,7 @@ export default function Export() {
   const [manifestInfo, setManifestInfo] = useState<ExportManifest | null>(null)
   const [manifestJson, setManifestJson] = useState<string | null>(null)
   const [manifestCsv, setManifestCsv] = useState<string | null>(null)
+  const [custodyLog, setCustodyLog] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -70,6 +72,7 @@ export default function Export() {
     setManifestInfo(null)
     setManifestJson(null)
     setManifestCsv(null)
+    setCustodyLog(null)
   }, [selectedIds, includeOriginals, includeRedacted, includeMetadata, outputMode])
 
   const selectedItems = useMemo(
@@ -117,9 +120,12 @@ export default function Export() {
         vaultKey,
       })
 
+      const custody = await buildCustodyLog(selectedItems.map((item) => item.id))
+
       setManifestInfo(manifest)
       setManifestJson(json)
       setManifestCsv(csv)
+      setCustodyLog(custody)
       setMessage(
         manifest.files.length === 0
           ? 'Manifest generated, but it contains 0 files.'
@@ -366,6 +372,15 @@ export default function Export() {
                   >
                     Download manifest.csv
                   </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      downloadTextFile('custody_log.jsonl', custodyLog ?? '', 'application/jsonl')
+                    }
+                    disabled={!custodyLog}
+                  >
+                    Download custody_log.jsonl
+                  </Button>
                 </div>
                 <div className="grid gap-4 lg:grid-cols-2">
                   <pre className="max-h-80 overflow-auto rounded-2xl border border-sand-200 bg-white/70 p-4 text-xs text-sand-700 dark:border-sand-700 dark:bg-sand-900/70 dark:text-sand-200">
@@ -375,6 +390,11 @@ export default function Export() {
                     {manifestCsv}
                   </pre>
                 </div>
+                {custodyLog && (
+                  <pre className="max-h-56 overflow-auto rounded-2xl border border-sand-200 bg-white/70 p-4 text-xs text-sand-700 dark:border-sand-700 dark:bg-sand-900/70 dark:text-sand-200">
+                    {custodyLog}
+                  </pre>
+                )}
               </div>
             </Card>
           )}

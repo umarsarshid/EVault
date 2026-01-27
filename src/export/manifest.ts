@@ -98,7 +98,7 @@ const normalizeLocation = (location?: ItemLocation) => {
   }
 }
 
-const custodyPointerForItem = (itemId: string) => `custody/${itemId}.json`
+const custodyPointerForItem = () => 'custody_log.jsonl'
 
 const formatCapturedAt = (timestamp: number) => new Date(timestamp).toISOString()
 
@@ -158,7 +158,7 @@ const buildManifestEntry = async ({
     where: metadata?.where,
     notes: metadata?.notes,
     location,
-    custodyLog: custodyPointerForItem(item.id),
+    custodyLog: custodyPointerForItem(),
   }
 }
 
