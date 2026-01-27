@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from '../db'
 import { decryptBlob, encryptBlob } from './blob'
 import { createVault, unlockVault } from './vault'
+import { canonicalStringify } from '../custody'
 import { getSodium } from './sodium'
 
 describe('crypto helpers', () => {
@@ -45,5 +46,12 @@ describe('crypto helpers', () => {
 
     expect(text).toContain(payload.what)
     expect(JSON.parse(text)).toMatchObject(payload)
+  })
+
+  it('canonical stringifies objects with stable key order', () => {
+    const first = canonicalStringify({ b: 2, a: { z: 1, y: 2 }, c: [3, 2, 1] })
+    const second = canonicalStringify({ c: [3, 2, 1], a: { y: 2, z: 1 }, b: 2 })
+
+    expect(first).toBe(second)
   })
 })
