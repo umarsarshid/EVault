@@ -28,4 +28,22 @@ describe('crypto helpers', () => {
 
     await expect(unlockVault('wrong-passphrase')).rejects.toThrow('Invalid passphrase')
   })
+
+  it('saves encrypted testimony payload as JSON', async () => {
+    const { vaultKey } = await createVault({ vaultName: 'Test Vault', passphrase: 'paper-key' })
+    const payload = {
+      what: 'Observed incident',
+      when: '2026-01-27T10:30',
+      where: 'Main Street',
+      notes: 'Text-only capture',
+    }
+
+    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' })
+    const encrypted = await encryptBlob(vaultKey, blob)
+    const decrypted = await decryptBlob(vaultKey, encrypted)
+    const text = await decrypted.text()
+
+    expect(text).toContain(payload.what)
+    expect(JSON.parse(text)).toMatchObject(payload)
+  })
 })

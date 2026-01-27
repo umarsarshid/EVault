@@ -11,6 +11,12 @@ pnpm dev
 
 Open `http://localhost:5173`.
 
+## Tests
+
+```bash
+pnpm test
+```
+
 ## Stack
 
 - Vite + React + TypeScript
@@ -53,3 +59,8 @@ You are responsible for complying with local laws on recording, consent, and dat
 - A random vault key encrypts content; it is wrapped with the passphrase-derived master key.
 - A signing keypair (Ed25519) is generated for custody logs; the private key is wrapped with the vault key.
 - The decrypted vault key is kept in memory only and wiped on lock; auto-lock is a placeholder timer.
+
+## Capture notes
+
+- The capture flow supports photo, video, audio, and text-only testimony.
+- Media is encrypted client-side before being saved to IndexedDB.
