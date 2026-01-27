@@ -3,7 +3,7 @@ import Home from './Home'
 
 export default function App() {
   return (
-    <div className="app">
+    <div className="min-h-screen">
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="*" element={<Navigate to="/" replace />} />
