@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { db } from '../db'
 import { decryptBlob, encryptBlob } from './blob'
 import { createVault, unlockVault } from './vault'
-import { canonicalStringify } from '../custody'
+import { appendCustodyEvent, canonicalStringify, verifyCustodyChain } from '../custody'
 import { getSodium } from './sodium'
 
 describe('crypto helpers', () => {
@@ -53,5 +53,30 @@ describe('crypto helpers', () => {
     const second = canonicalStringify({ c: [3, 2, 1], a: { y: 2, z: 1 }, b: 2 })
 
     expect(first).toBe(second)
+  })
+
+  it('detects tampering in custody hash chain', async () => {
+    const { vaultKey } = await createVault({ vaultName: 'Test Vault', passphrase: 'chain-key' })
+    const itemId = 'item-123'
+
+    const first = await appendCustodyEvent({
+      itemId,
+      action: 'capture',
+      vaultKey,
+      details: { note: 'initial' },
+    })
+
+    const second = await appendCustodyEvent({
+      itemId,
+      action: 'redact',
+      vaultKey,
+      details: { note: 'mask' },
+    })
+
+    const events = [first, second]
+    expect(await verifyCustodyChain(events)).toBe(true)
+
+    const tampered = { ...second, details: { note: 'changed' } }
+    expect(await verifyCustodyChain([first, tampered])).toBe(false)
   })
 })

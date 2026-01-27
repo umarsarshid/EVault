@@ -7,3 +7,4 @@ export {
   custodyEventPayload,
 } from './schema'
 export { appendCustodyEvent } from './chain'
+export { verifyCustodyChain } from './verify'
