@@ -5,6 +5,7 @@ import { db, type EvidenceItem } from '../db'
 import { appendCustodyEvent } from '../custody'
 import { buildCustodyLog } from '../export/custodyLog'
 import { buildExportManifest, type ExportManifest } from '../export/manifest'
+import { buildExportZip } from '../export/zip'
 import { useVault } from './VaultContext'
 
 type OutputMode = 'review' | 'encrypted'
@@ -24,6 +25,16 @@ const formatDate = (timestamp: number) =>
 
 const downloadTextFile = (filename: string, content: string, mimeType: string) => {
   const blob = new Blob([content], { type: mimeType })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+const downloadBinaryFile = (filename: string, data: Uint8Array, mimeType: string) => {
+  const blob = new Blob([data], { type: mimeType })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
@@ -176,10 +187,28 @@ export default function Export() {
         })
       }
 
-      setMessage('Export placeholder complete. Custody events logged.')
+      const { zipData, zipFilename, manifest, manifestJson, manifestCsv, custodyLog } =
+        await buildExportZip({
+          exportId,
+          items: selectedItems,
+          includeOriginals,
+          includeRedacted,
+          includeMetadata,
+          outputMode,
+          vaultKey,
+        })
+
+      downloadBinaryFile(zipFilename, zipData, 'application/zip')
+
+      setManifestInfo(manifest)
+      setManifestJson(manifestJson)
+      setManifestCsv(manifestCsv)
+      setCustodyLog(custodyLog)
+
+      setMessage('ZIP bundle ready. Custody events logged.')
     } catch (err) {
       console.error(err)
-      setMessage('Failed to log export events.')
+      setMessage('Failed to build export bundle.')
     } finally {
       setIsExporting(false)
     }

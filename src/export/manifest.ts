@@ -58,13 +58,13 @@ const MIME_EXTENSION: Record<string, string> = {
 
 const extensionFromMime = (mime: string) => MIME_EXTENSION[mime] ?? 'bin'
 
-const buildFilename = (
+export const buildExportFilename = (
   item: EvidenceItem,
   variant: 'original' | 'redacted',
   outputMode: ExportOutputMode,
   mime: string
 ) => {
-  const base = `item-${item.id}-${variant}`
+  const base = `media/item_${item.id}_${variant}`
   if (outputMode === 'encrypted') {
     return `${base}.enc.json`
   }
@@ -151,7 +151,7 @@ const buildManifestEntry = async ({
   const location = includeMetadata ? normalizeLocation(item.location) : undefined
 
   return {
-    filename: buildFilename(item, variant, outputMode, mime),
+    filename: buildExportFilename(item, variant, outputMode, mime),
     sha256,
     capturedAt: formatCapturedAt(item.capturedAt),
     what: metadata?.what,
