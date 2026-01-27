@@ -49,6 +49,8 @@ export default function Capture() {
   const [lat, setLat] = useState('')
   const [lon, setLon] = useState('')
   const [accuracy, setAccuracy] = useState('')
+  const [locationTs, setLocationTs] = useState('')
+  const [locationStatus, setLocationStatus] = useState<string | null>(null)
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
@@ -373,6 +375,31 @@ export default function Capture() {
     setSaveMessage('Save encrypted is coming next; nothing persisted yet.')
   }
 
+  const captureLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationStatus('Geolocation is not supported on this device.')
+      return
+    }
+
+    setLocationStatus('Requesting location permission…')
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude, accuracy: geoAccuracy } = position.coords
+        setLat(latitude.toFixed(6))
+        setLon(longitude.toFixed(6))
+        setAccuracy(Math.round(geoAccuracy).toString())
+        setLocationTs(getLocalDateTimeInputValue(new Date(position.timestamp)))
+        setLocationStatus('Location captured (optional).')
+      },
+      (error) => {
+        console.error(error)
+        setLocationStatus('Unable to capture location. You can enter it manually or skip.')
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    )
+  }
+
   const saveDisabled = vaultStatus !== 'unlocked' || !hasMedia
 
   return (
@@ -624,17 +651,24 @@ export default function Capture() {
                   onChange={(event) => setLon(event.target.value)}
                   className="w-full rounded-2xl border border-sand-200 bg-white px-4 py-3 text-sm text-sand-900 shadow-[0_8px_30px_rgba(17,24,39,0.06)] placeholder:text-sand-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sand-400 dark:border-sand-700 dark:bg-sand-900/70 dark:text-sand-100 dark:placeholder:text-sand-500"
                 />
-                <input
-                  type="text"
-                  placeholder="Accuracy (m)"
-                  value={accuracy}
-                  onChange={(event) => setAccuracy(event.target.value)}
-                  className="w-full rounded-2xl border border-sand-200 bg-white px-4 py-3 text-sm text-sand-900 shadow-[0_8px_30px_rgba(17,24,39,0.06)] placeholder:text-sand-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sand-400 dark:border-sand-700 dark:bg-sand-900/70 dark:text-sand-100 dark:placeholder:text-sand-500"
-                />
+              <input
+                type="text"
+                placeholder="Accuracy (m)"
+                value={accuracy}
+                onChange={(event) => setAccuracy(event.target.value)}
+                className="w-full rounded-2xl border border-sand-200 bg-white px-4 py-3 text-sm text-sand-900 shadow-[0_8px_30px_rgba(17,24,39,0.06)] placeholder:text-sand-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sand-400 dark:border-sand-700 dark:bg-sand-900/70 dark:text-sand-100 dark:placeholder:text-sand-500"
+              />
+            </div>
+              <div className="space-y-2 text-xs text-sand-600 dark:text-sand-400">
+                <p>Location optional. Capture it if you can, or leave blank.</p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button variant="outline" onClick={captureLocation}>
+                    Capture location
+                  </Button>
+                  {locationTs && <span>Captured: {locationTs}</span>}
+                </div>
+                {locationStatus && <p>{locationStatus}</p>}
               </div>
-              <p className="text-xs text-sand-600 dark:text-sand-400">
-                Location fields are optional; leave blank if unavailable.
-              </p>
             </div>
           </Card>
         </div>
