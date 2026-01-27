@@ -2,6 +2,22 @@
 
 Offline-first, locally encrypted evidence capture in a single installable PWA. Nothing leaves the device unless you export it.
 
+## Quick start
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Open `http://localhost:5173`.
+
+## Stack
+
+- Vite + React + TypeScript
+- Tailwind CSS
+- Dexie (IndexedDB)
+- libsodium (client-side crypto)
+
 ## What this app is / isn't
 
 **This app is:**
@@ -30,3 +46,10 @@ Offline-first, locally encrypted evidence capture in a single installable PWA. N
 ## Legal & consent
 
 You are responsible for complying with local laws on recording, consent, and data handling. Do not upload sensitive evidence to unsafe channels or share it without appropriate legal guidance.
+
+## Crypto notes (MVP)
+
+- Passphrase is stretched with Argon2id (libsodium `crypto_pwhash`).
+- A random vault key encrypts content; it is wrapped with the passphrase-derived master key.
+- A signing keypair (Ed25519) is generated for custody logs; the private key is wrapped with the vault key.
+- The decrypted vault key is kept in memory only and wiped on lock; auto-lock is a placeholder timer.
