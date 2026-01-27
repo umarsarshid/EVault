@@ -10,6 +10,7 @@ const navItems = [
   { label: 'Unlock', to: '/vault/unlock' },
   { label: 'Vault', to: '/vault' },
   { label: 'Capture', to: '/capture' },
+  { label: 'Testimony', to: '/testimony' },
   { label: 'Export', to: '/export' },
 ]
 
