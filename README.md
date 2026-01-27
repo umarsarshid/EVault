@@ -64,3 +64,9 @@ You are responsible for complying with local laws on recording, consent, and dat
 
 - The capture flow supports photo, video, audio, and text-only testimony.
 - Media is encrypted client-side before being saved to IndexedDB.
+
+## Custody log notes
+
+- Each custody event is canonicalized (stable JSON field ordering) before hashing.
+- Events are hash-chained per item (`hash = H(prevHash + canonicalPayload)`).
+- Each event hash is signed with the vault’s Ed25519 key; signatures are stored with events.
