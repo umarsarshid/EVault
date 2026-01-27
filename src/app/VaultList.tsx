@@ -11,10 +11,11 @@ export default function VaultList() {
           Items captured offline will appear here once the vault is unlocked.
         </p>
       </header>
-      <Card title="No items yet" description="Capture media or write testimony to begin.">
+      <Card title="No evidence yet" description="Capture media or write testimony to begin.">
         <div className="flex flex-wrap gap-3">
-          <Button>Start capture</Button>
-          <Button variant="outline">Write testimony</Button>
+          <Button>Capture</Button>
+          <Button variant="outline">Testimony</Button>
+          <Button variant="ghost">Export</Button>
         </div>
       </Card>
     </div>
