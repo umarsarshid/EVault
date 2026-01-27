@@ -16,6 +16,24 @@ export class EvidenceVaultDB extends Dexie {
       custody_events: 'id, itemId, timestamp, type',
       settings: '&key, updatedAt',
     })
+
+    this.version(2)
+      .stores({
+        vault_meta: 'id, createdAt, updatedAt',
+        items: 'id, createdAt, capturedAt, type',
+        custody_events: 'id, itemId, timestamp, type',
+        settings: '&key, updatedAt',
+      })
+      .upgrade((tx) =>
+        tx
+          .table('items')
+          .toCollection()
+          .modify((item) => {
+            if (!item.capturedAt) {
+              item.capturedAt = item.createdAt
+            }
+          })
+      )
   }
 }
 

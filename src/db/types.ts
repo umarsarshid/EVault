@@ -6,13 +6,32 @@ export type VaultMeta = {
   status?: 'locked' | 'unlocked'
 }
 
+export type ItemMetadata = {
+  what?: string
+  where?: string
+  notes?: string
+}
+
+export type ItemLocation = {
+  lat: number
+  lon: number
+  accuracy?: number
+}
+
+export type ItemRedaction = Record<string, unknown>
+
 export type EvidenceItem = {
   id: string
   type: 'photo' | 'video' | 'audio' | 'testimony'
   createdAt: number
-  updatedAt: number
-  title?: string
-  status?: 'draft' | 'final'
+  capturedAt: number
+  encryptedBlob: Uint8Array
+  blobMime: string
+  blobSize: number
+  metadata: ItemMetadata
+  location?: ItemLocation
+  redaction?: ItemRedaction
+  updatedAt?: number
 }
 
 export type CustodyEvent = {
