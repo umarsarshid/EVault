@@ -34,18 +34,38 @@ export type ItemLocation = {
   lat: number
   lon: number
   accuracy?: number
+  ts?: number
 }
 
-export type ItemRedaction = Record<string, unknown>
+export type ItemRedactionRect = {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export type ItemRedaction = {
+  method: 'pixelate'
+  rects: ItemRedactionRect[]
+  createdAt: number
+}
+
+export type EncryptedPayload = {
+  nonce: string
+  cipher: string
+}
 
 export type EvidenceItem = {
   id: string
   type: 'photo' | 'video' | 'audio' | 'testimony'
   createdAt: number
   capturedAt: number
-  encryptedBlob: Uint8Array
+  encryptedBlob: EncryptedPayload
   blobMime: string
   blobSize: number
+  redactedBlob?: EncryptedPayload
+  redactedMime?: string
+  redactedSize?: number
   metadata: ItemMetadata
   location?: ItemLocation
   redaction?: ItemRedaction

@@ -2,10 +2,12 @@ export { db, EvidenceVaultDB } from './db'
 export type {
   CustodyEvent,
   CustodyEventAction,
+  EncryptedPayload,
   EvidenceItem,
   ItemLocation,
   ItemMetadata,
   ItemRedaction,
+  ItemRedactionRect,
   Setting,
   VaultMeta,
   VaultKdfParams,
