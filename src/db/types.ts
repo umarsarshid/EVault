@@ -4,6 +4,22 @@ export type VaultMeta = {
   updatedAt: number
   vaultName?: string
   status?: 'locked' | 'unlocked'
+  salt?: string
+  kdfParams?: VaultKdfParams
+  wrappedVaultKey?: WrappedVaultKey
+}
+
+export type VaultKdfParams = {
+  alg: 'argon2id'
+  opslimit: number
+  memlimit: number
+  saltBytes: number
+  keyBytes: number
+}
+
+export type WrappedVaultKey = {
+  nonce: string
+  cipher: string
 }
 
 export type ItemMetadata = {

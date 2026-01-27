@@ -8,4 +8,6 @@ export type {
   ItemRedaction,
   Setting,
   VaultMeta,
+  VaultKdfParams,
+  WrappedVaultKey,
 } from './types'
