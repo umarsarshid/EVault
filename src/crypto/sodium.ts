@@ -1,4 +1,4 @@
-import sodium from 'libsodium-wrappers'
+import sodium from 'libsodium-wrappers-sumo'
 
 let initPromise: Promise<typeof sodium> | null = null
 let ready = false

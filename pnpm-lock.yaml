@@ -14,6 +14,9 @@ importers:
       libsodium-wrappers:
         specifier: ^0.8.2
         version: 0.8.2
+      libsodium-wrappers-sumo:
+        specifier: ^0.8.2
+        version: 0.8.2
       react:
         specifier: ^19.2.4
         version: 19.2.4
@@ -662,6 +665,12 @@ packages:
     resolution: {integrity: sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg==}
     engines: {node: '>=6'}
     hasBin: true
+
+  libsodium-sumo@0.8.2:
+    resolution: {integrity: sha512-uMgnjphJ717jLN+jFG1HUgNrK/gOVVfaO1DGZ1Ig/fKLKLVhvaH/sM1I1v784JFvmkJDaczDpi7xSYC4Jvdo1Q==}
+
+  libsodium-wrappers-sumo@0.8.2:
+    resolution: {integrity: sha512-wd1xAY++Kr6VMikSaa4EPRAHJmFvNlGWiiwU3Jh3GR1zRYF3/I3vy/wYsr4k3LVsNzwb9sqfEQ4LdVQ6zEebyQ==}
 
   libsodium-wrappers@0.8.2:
     resolution: {integrity: sha512-VFLmfxkxo+U9q60tjcnSomQBRx2UzlRjKWJqvB4K1pUqsMQg4cu3QXA2nrcsj9A1qRsnJBbi2Ozx1hsiDoCkhw==}
@@ -1384,6 +1393,12 @@ snapshots:
   jsesc@3.1.0: {}
 
   json5@2.2.3: {}
+
+  libsodium-sumo@0.8.2: {}
+
+  libsodium-wrappers-sumo@0.8.2:
+    dependencies:
+      libsodium-sumo: 0.8.2
 
   libsodium-wrappers@0.8.2:
     dependencies:
