@@ -13,7 +13,7 @@ export default function Card({
   ...props
 }: CardProps) {
   const classes = [
-    'rounded-3xl border border-sand-200 bg-white/85 p-6 shadow-soft backdrop-blur',
+    'rounded-3xl border border-sand-200 bg-white/85 p-6 shadow-soft backdrop-blur dark:border-sand-800 dark:bg-sand-900/70',
     className,
   ]
     .filter(Boolean)
@@ -23,8 +23,12 @@ export default function Card({
     <section className={classes} {...props}>
       {(title || description) && (
         <header className="space-y-1">
-          {title && <h2 className="text-lg font-semibold text-sand-900">{title}</h2>}
-          {description && <p className="text-sm text-sand-700">{description}</p>}
+          {title && (
+            <h2 className="text-lg font-semibold text-sand-900 dark:text-sand-50">
+              {title}
+            </h2>
+          )}
+          {description && <p className="text-sm text-sand-700 dark:text-sand-300">{description}</p>}
         </header>
       )}
       {children && <div className="mt-4">{children}</div>}

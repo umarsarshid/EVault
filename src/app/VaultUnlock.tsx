@@ -9,9 +9,11 @@ export default function VaultUnlock() {
   return (
     <div className="space-y-8">
       <header className="space-y-2">
-        <p className="text-xs uppercase tracking-[0.3em] text-sand-600">Vault</p>
-        <h1 className="text-3xl font-semibold text-sand-900">Unlock vault</h1>
-        <p className="text-sm text-sand-700">
+        <p className="text-xs uppercase tracking-[0.3em] text-sand-600 dark:text-sand-400">
+          Vault
+        </p>
+        <h1 className="text-3xl font-semibold text-sand-900 dark:text-sand-50">Unlock vault</h1>
+        <p className="text-sm text-sand-700 dark:text-sand-300">
           Enter your passphrase to access locally stored evidence.
         </p>
       </header>

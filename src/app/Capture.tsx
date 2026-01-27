@@ -5,9 +5,13 @@ export default function Capture() {
   return (
     <div className="space-y-8">
       <header className="space-y-2">
-        <p className="text-xs uppercase tracking-[0.3em] text-sand-600">Capture</p>
-        <h1 className="text-3xl font-semibold text-sand-900">Record new evidence</h1>
-        <p className="text-sm text-sand-700">
+        <p className="text-xs uppercase tracking-[0.3em] text-sand-600 dark:text-sand-400">
+          Capture
+        </p>
+        <h1 className="text-3xl font-semibold text-sand-900 dark:text-sand-50">
+          Record new evidence
+        </h1>
+        <p className="text-sm text-sand-700 dark:text-sand-300">
           Capture photo, video, audio, or written testimony while offline.
         </p>
       </header>

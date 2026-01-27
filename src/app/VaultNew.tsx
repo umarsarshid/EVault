@@ -37,9 +37,13 @@ export default function VaultNew() {
   return (
     <div className="space-y-8">
       <header className="space-y-2">
-        <p className="text-xs uppercase tracking-[0.3em] text-sand-600">Vault</p>
-        <h1 className="text-3xl font-semibold text-sand-900">Create a new vault</h1>
-        <p className="text-sm text-sand-700">
+        <p className="text-xs uppercase tracking-[0.3em] text-sand-600 dark:text-sand-400">
+          Vault
+        </p>
+        <h1 className="text-3xl font-semibold text-sand-900 dark:text-sand-50">
+          Create a new vault
+        </h1>
+        <p className="text-sm text-sand-700 dark:text-sand-300">
           Choose a strong passphrase. It will be required to unlock and export evidence.
         </p>
       </header>
@@ -62,13 +66,15 @@ export default function VaultNew() {
             value={confirm}
             onChange={(event) => setConfirm(event.target.value)}
           />
-          <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+          <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-500/40 dark:bg-amber-900/30 dark:text-amber-100">
             If you forget your passphrase, your data is unrecoverable.
           </p>
           {passphraseMismatch && (
-            <p className="text-xs text-rose-600">Passphrases do not match.</p>
+            <p className="text-xs text-rose-600 dark:text-rose-300">
+              Passphrases do not match.
+            </p>
           )}
-          {error && <p className="text-xs text-rose-600">{error}</p>}
+          {error && <p className="text-xs text-rose-600 dark:text-rose-300">{error}</p>}
           <div className="flex flex-wrap gap-3">
             <Button onClick={handleCreate} disabled={!canSubmit}>
               {isSubmitting ? 'Creating...' : 'Create vault'}

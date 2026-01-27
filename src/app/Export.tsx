@@ -5,9 +5,13 @@ export default function Export() {
   return (
     <div className="space-y-8">
       <header className="space-y-2">
-        <p className="text-xs uppercase tracking-[0.3em] text-sand-600">Export</p>
-        <h1 className="text-3xl font-semibold text-sand-900">Prepare an export bundle</h1>
-        <p className="text-sm text-sand-700">
+        <p className="text-xs uppercase tracking-[0.3em] text-sand-600 dark:text-sand-400">
+          Export
+        </p>
+        <h1 className="text-3xl font-semibold text-sand-900 dark:text-sand-50">
+          Prepare an export bundle
+        </h1>
+        <p className="text-sm text-sand-700 dark:text-sand-300">
           Generate a ZIP with originals, redactions, a manifest, and verification file.
         </p>
       </header>
