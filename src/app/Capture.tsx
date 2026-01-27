@@ -21,11 +21,24 @@ const pickVideoMimeType = () => {
   return ''
 }
 
+const pickAudioMimeType = () => {
+  const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg']
+
+  for (const type of candidates) {
+    if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type)) {
+      return type
+    }
+  }
+
+  return ''
+}
+
 export default function Capture() {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
   const intervalRef = useRef<number | null>(null)
   const timeoutRef = useRef<number | null>(null)
+  const audioRecorderRef = useRef<MediaRecorder | null>(null)
 
   const [isStreaming, setIsStreaming] = useState(false)
   const [photoBlob, setPhotoBlob] = useState<Blob | null>(null)
@@ -35,6 +48,11 @@ export default function Capture() {
   const [videoBytes, setVideoBytes] = useState(0)
   const [videoSeconds, setVideoSeconds] = useState(0)
   const [isRecording, setIsRecording] = useState(false)
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [audioBytes, setAudioBytes] = useState(0)
+  const [audioSeconds, setAudioSeconds] = useState(0)
+  const [isRecordingAudio, setIsRecordingAudio] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -73,6 +91,9 @@ export default function Capture() {
       if (recorderRef.current && recorderRef.current.state !== 'inactive') {
         recorderRef.current.stop()
       }
+      if (audioRecorderRef.current && audioRecorderRef.current.state !== 'inactive') {
+        audioRecorderRef.current.stop()
+      }
       if (stream) {
         stream.getTracks().forEach((track) => track.stop())
       }
@@ -90,6 +111,12 @@ export default function Capture() {
       if (videoUrl) URL.revokeObjectURL(videoUrl)
     }
   }, [videoUrl])
+
+  useEffect(() => {
+    return () => {
+      if (audioUrl) URL.revokeObjectURL(audioUrl)
+    }
+  }, [audioUrl])
 
   const handleCapture = async () => {
     const video = videoRef.current
@@ -199,6 +226,83 @@ export default function Capture() {
     }
   }
 
+  const resetAudioState = () => {
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl)
+    }
+    setAudioBlob(null)
+    setAudioUrl(null)
+    setAudioBytes(0)
+    setAudioSeconds(0)
+  }
+
+  const startAudioRecording = async () => {
+    if (!isStreaming || !videoRef.current) return
+
+    const stream = videoRef.current.srcObject
+    if (!stream || !(stream instanceof MediaStream)) {
+      setError('Microphone not ready for recording.')
+      return
+    }
+
+    const audioTracks = stream.getAudioTracks()
+    if (audioTracks.length === 0) {
+      setError('Microphone not available.')
+      return
+    }
+
+    const audioStream = new MediaStream(audioTracks)
+    const mimeType = pickAudioMimeType()
+    const recorder = new MediaRecorder(audioStream, mimeType ? { mimeType } : undefined)
+    const chunks: Blob[] = []
+
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        chunks.push(event.data)
+        const total = chunks.reduce((sum, chunk) => sum + chunk.size, 0)
+        setAudioBytes(total)
+      }
+    }
+
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' })
+      setAudioBlob(blob)
+      setAudioUrl(URL.createObjectURL(blob))
+      setIsRecordingAudio(false)
+    }
+
+    resetAudioState()
+    setError(null)
+    setIsRecordingAudio(true)
+    setAudioSeconds(0)
+    audioRecorderRef.current = recorder
+
+    recorder.start(1000)
+
+    const interval = window.setInterval(() => {
+      setAudioSeconds((seconds) => seconds + 1)
+    }, 1000)
+
+    const stopTimer = window.setTimeout(() => {
+      if (recorder.state !== 'inactive') {
+        recorder.stop()
+      }
+      window.clearInterval(interval)
+    }, MAX_VIDEO_SECONDS * 1000)
+
+    recorder.addEventListener('stop', () => {
+      window.clearInterval(interval)
+      window.clearTimeout(stopTimer)
+    })
+  }
+
+  const stopAudioRecording = () => {
+    const recorder = audioRecorderRef.current
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.stop()
+    }
+  }
+
   return (
     <div className="space-y-8">
       <header className="space-y-2">
@@ -266,6 +370,38 @@ export default function Capture() {
                   controls
                   className="w-full rounded-2xl border border-sand-200 dark:border-sand-700"
                 />
+              )}
+            </div>
+          </Card>
+
+          <Card title="Audio capture" description="Record an audio note (max 60 seconds).">
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <Button onClick={startAudioRecording} disabled={!isStreaming || isRecordingAudio}>
+                  Start audio
+                </Button>
+                <Button variant="outline" onClick={stopAudioRecording} disabled={!isRecordingAudio}>
+                  Stop audio
+                </Button>
+                <Button variant="ghost" onClick={resetAudioState} disabled={isRecordingAudio}>
+                  Clear audio
+                </Button>
+              </div>
+              <div className="flex flex-wrap items-center gap-4 text-xs text-sand-600 dark:text-sand-400">
+                <span>{isRecordingAudio ? 'Recording…' : 'Idle'}</span>
+                <span>
+                  Duration: {audioSeconds}s / {MAX_VIDEO_SECONDS}s
+                </span>
+                <span>Size: {Math.max(1, Math.round(audioBytes / 1024))} KB</span>
+              </div>
+              <div className="h-24 overflow-hidden rounded-2xl border border-dashed border-sand-300 bg-sand-50 px-4 py-3 text-xs text-sand-600 dark:border-sand-600 dark:bg-sand-900/60 dark:text-sand-400">
+                <div className="flex h-full items-center justify-between">
+                  <span>Waveform placeholder</span>
+                  <span className="font-mono">▂▅▃▆▁▇▂▆▃▅▂▃</span>
+                </div>
+              </div>
+              {audioUrl && (
+                <audio src={audioUrl} controls className="w-full" />
               )}
             </div>
           </Card>
