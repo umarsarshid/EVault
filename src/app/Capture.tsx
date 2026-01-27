@@ -34,11 +34,16 @@ const pickAudioMimeType = () => {
   return ''
 }
 
+const getLocalDateTimeInputValue = (date: Date) => {
+  const offsetMs = date.getTimezoneOffset() * 60_000
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16)
+}
+
 export default function Capture() {
   const { vaultStatus } = useVault()
   const [stepIndex, setStepIndex] = useState(0)
   const [what, setWhat] = useState('')
-  const [when, setWhen] = useState('')
+  const [when, setWhen] = useState(() => getLocalDateTimeInputValue(new Date()))
   const [where, setWhere] = useState('')
   const [notes, setNotes] = useState('')
   const [lat, setLat] = useState('')
@@ -594,6 +599,9 @@ export default function Capture() {
                 onChange={(event) => setWhen(event.target.value)}
                 className="w-full rounded-2xl border border-sand-200 bg-white px-4 py-3 text-sm text-sand-900 shadow-[0_8px_30px_rgba(17,24,39,0.06)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sand-400 dark:border-sand-700 dark:bg-sand-900/70 dark:text-sand-100"
               />
+              <p className="text-xs text-sand-600 dark:text-sand-400">
+                Auto-filled with the current time. Adjust if needed.
+              </p>
               <input
                 type="text"
                 placeholder="Where did it happen?"
