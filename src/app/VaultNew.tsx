@@ -6,7 +6,7 @@ import { createVault } from '../crypto/vault'
 import { useVault } from './VaultContext'
 
 export default function VaultNew() {
-  const { setVaultStatus } = useVault()
+  const { setVaultStatus, setVaultKey } = useVault()
   const [vaultName, setVaultName] = useState('')
   const [passphrase, setPassphrase] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -24,7 +24,8 @@ export default function VaultNew() {
     setIsSubmitting(true)
 
     try {
-      await createVault({ vaultName: vaultName.trim(), passphrase })
+      const { vaultKey } = await createVault({ vaultName: vaultName.trim(), passphrase })
+      setVaultKey(vaultKey)
       setVaultStatus('unlocked')
     } catch (err) {
       console.error(err)

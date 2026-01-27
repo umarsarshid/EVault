@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import { db, type EvidenceItem } from '../db'
@@ -104,8 +105,14 @@ export default function VaultList() {
                   <div className="font-semibold text-sand-900 dark:text-sand-100">
                     {item.metadata?.what || 'Untitled capture'}
                   </div>
-                  <div className="text-xs text-sand-500 dark:text-sand-400">
-                    {formatDate(item.capturedAt)}
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-sand-500 dark:text-sand-400">
+                    <span>{formatDate(item.capturedAt)}</span>
+                    <Link
+                      to={`/item/${item.id}`}
+                      className="rounded-full border border-sand-200 px-2 py-1 text-xs font-medium text-sand-700 transition hover:border-sand-400 dark:border-sand-700 dark:text-sand-300 dark:hover:border-sand-500"
+                    >
+                      View
+                    </Link>
                   </div>
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">

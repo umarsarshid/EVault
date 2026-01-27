@@ -4,20 +4,25 @@ import Button from '../components/Button'
 import Card from '../components/Card'
 import { db, type EvidenceItem } from '../db'
 import { decryptBlob, encryptBlob } from '../crypto/blob'
+import { appendCustodyEvent } from '../custody'
 import RedactionCanvas, { type RedactionRect } from '../redact/RedactionCanvas'
 import { pixelateImage } from '../redact/pixelate'
 import { useVault } from './VaultContext'
+
+type PreviewMode = 'original' | 'redacted'
 
 export default function ItemDetail() {
   const { id } = useParams()
   const { vaultKey } = useVault()
   const [item, setItem] = useState<EvidenceItem | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [redactedUrl, setRedactedUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [rects, setRects] = useState<RedactionRect[]>([])
   const [redactionMessage, setRedactionMessage] = useState<string | null>(null)
   const [isSavingRedaction, setIsSavingRedaction] = useState(false)
+  const [previewMode, setPreviewMode] = useState<PreviewMode>('original')
 
   useEffect(() => {
     let mounted = true
@@ -77,12 +82,48 @@ export default function ItemDetail() {
   }, [item, vaultKey])
 
   useEffect(() => {
+    let active = true
+
+    const buildRedactedPreview = async () => {
+      if (!item?.redactedBlob || !vaultKey) {
+        setRedactedUrl(null)
+        return
+      }
+
+      try {
+        const blob = await decryptBlob(vaultKey, {
+          nonce: item.redactedBlob.nonce,
+          cipher: item.redactedBlob.cipher,
+          mime: item.redactedMime ?? item.blobMime,
+          size: item.redactedSize ?? item.blobSize,
+        })
+
+        if (!active) return
+
+        const url = URL.createObjectURL(blob)
+        setRedactedUrl(url)
+      } catch (err) {
+        console.error(err)
+      }
+    }
+
+    void buildRedactedPreview()
+
+    return () => {
+      active = false
+    }
+  }, [item, vaultKey])
+
+  useEffect(() => {
     return () => {
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl)
       }
+      if (redactedUrl) {
+        URL.revokeObjectURL(redactedUrl)
+      }
     }
-  }, [previewUrl])
+  }, [previewUrl, redactedUrl])
 
   const saveRedacted = async () => {
     if (!item || item.type !== 'photo') return
@@ -137,6 +178,16 @@ export default function ItemDetail() {
       }
 
       setItem(updatedItem)
+      await appendCustodyEvent({
+        itemId: item.id,
+        action: 'redact',
+        vaultKey,
+        details: {
+          method: 'pixelate',
+          rectCount: rects.length,
+        },
+      })
+      setPreviewMode('redacted')
       setRedactionMessage('Redacted copy saved.')
     } catch (err) {
       console.error(err)
@@ -145,6 +196,9 @@ export default function ItemDetail() {
       setIsSavingRedaction(false)
     }
   }
+
+  const canShowRedacted = Boolean(redactedUrl)
+  const showingRedacted = previewMode === 'redacted'
 
   return (
     <div className="space-y-8">
@@ -173,11 +227,47 @@ export default function ItemDetail() {
           <Card title="Preview" description="Decrypted in memory for viewing only.">
             {previewUrl ? (
               <div className="space-y-4">
-                {item.type === 'photo' && (
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMode('original')}
+                    className={[
+                      'rounded-full border px-3 py-1 font-medium transition',
+                      !showingRedacted
+                        ? 'border-sand-900 bg-sand-900 text-white dark:border-sand-100 dark:bg-sand-100 dark:text-sand-900'
+                        : 'border-sand-200 bg-white/60 text-sand-600 dark:border-sand-700 dark:bg-sand-900/60 dark:text-sand-300',
+                    ].join(' ')}
+                  >
+                    Original
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMode('redacted')}
+                    disabled={!canShowRedacted}
+                    className={[
+                      'rounded-full border px-3 py-1 font-medium transition',
+                      showingRedacted
+                        ? 'border-emerald-600 bg-emerald-600 text-white dark:border-emerald-400 dark:bg-emerald-400 dark:text-emerald-950'
+                        : 'border-sand-200 bg-white/60 text-sand-600 dark:border-sand-700 dark:bg-sand-900/60 dark:text-sand-300',
+                      !canShowRedacted ? 'opacity-50' : '',
+                    ].join(' ')}
+                  >
+                    Redacted
+                  </button>
+                </div>
+
+                {item.type === 'photo' && !showingRedacted && (
                   <RedactionCanvas
                     imageUrl={previewUrl}
                     initialRects={item.redaction?.rects}
                     onChange={setRects}
+                  />
+                )}
+                {item.type === 'photo' && showingRedacted && redactedUrl && (
+                  <img
+                    src={redactedUrl}
+                    alt={item.metadata.what || 'Redacted evidence'}
+                    className="w-full rounded-2xl border border-sand-200 object-cover dark:border-sand-700"
                   />
                 )}
                 {item.type === 'video' && (
@@ -188,7 +278,8 @@ export default function ItemDetail() {
                   />
                 )}
                 {item.type === 'audio' && <audio src={previewUrl} controls className="w-full" />}
-                {item.type === 'photo' && (
+
+                {item.type === 'photo' && !showingRedacted && (
                   <div className="flex flex-wrap items-center gap-3">
                     <Button onClick={saveRedacted} disabled={isSavingRedaction}>
                       {isSavingRedaction ? 'Saving…' : 'Save redacted copy'}
@@ -197,6 +288,11 @@ export default function ItemDetail() {
                       Pixelate the selected regions.
                     </span>
                   </div>
+                )}
+                {item.type === 'photo' && showingRedacted && (
+                  <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-500/40 dark:bg-amber-900/30 dark:text-amber-100">
+                    Redaction is irreversible in exports unless you include originals.
+                  </p>
                 )}
                 {redactionMessage && (
                   <p className="text-xs text-amber-700 dark:text-amber-200">{redactionMessage}</p>

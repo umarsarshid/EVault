@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Button from '../components/Button'
 import Card from '../components/Card'
+import { db } from '../db'
+import { encryptBlob } from '../crypto/blob'
+import { appendCustodyEvent } from '../custody'
 import { useVault } from './VaultContext'
 
 const MAX_VIDEO_SECONDS = 60
@@ -39,8 +42,15 @@ const getLocalDateTimeInputValue = (date: Date) => {
   return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16)
 }
 
+const createItemId = () => {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID()
+  }
+  return `item_${Date.now()}_${Math.random().toString(16).slice(2)}`
+}
+
 export default function Capture() {
-  const { vaultStatus } = useVault()
+  const { vaultStatus, vaultKey } = useVault()
   const [stepIndex, setStepIndex] = useState(0)
   const [what, setWhat] = useState('')
   const [when, setWhen] = useState(() => getLocalDateTimeInputValue(new Date()))
@@ -371,8 +381,71 @@ export default function Capture() {
     setStepIndex((current) => Math.max(current - 1, 0))
   }
 
-  const handleSave = () => {
-    setSaveMessage('Save encrypted is coming next; nothing persisted yet.')
+  const handleSave = async () => {
+    if (!vaultKey) {
+      setSaveMessage('Unlock the vault before saving.')
+      return
+    }
+
+    const blob = photoBlob || videoBlob || audioBlob
+    if (!blob) {
+      setSaveMessage('Capture or import media before saving.')
+      return
+    }
+
+    try {
+      const encrypted = await encryptBlob(vaultKey, blob)
+      const now = Date.now()
+      const capturedAt = when ? new Date(when).getTime() : now
+
+      const location =
+        lat && lon
+          ? {
+              lat: Number.parseFloat(lat),
+              lon: Number.parseFloat(lon),
+              accuracy: accuracy ? Number.parseFloat(accuracy) : undefined,
+              ts: locationTs ? new Date(locationTs).getTime() : undefined,
+            }
+          : undefined
+
+      const itemId = createItemId()
+      const itemType = photoBlob ? 'photo' : videoBlob ? 'video' : 'audio'
+
+      await db.items.add({
+        id: itemId,
+        type: itemType,
+        createdAt: now,
+        capturedAt: Number.isNaN(capturedAt) ? now : capturedAt,
+        encryptedBlob: {
+          nonce: encrypted.nonce,
+          cipher: encrypted.cipher,
+        },
+        blobMime: encrypted.mime,
+        blobSize: encrypted.size,
+        metadata: {
+          what: what.trim(),
+          where: where.trim(),
+          notes: notes.trim() || undefined,
+        },
+        location,
+      })
+
+      await appendCustodyEvent({
+        itemId,
+        action: 'capture',
+        vaultKey,
+        details: {
+          type: itemType,
+          mime: encrypted.mime,
+          size: encrypted.size,
+        },
+      })
+
+      setSaveMessage('Saved encrypted item to the vault.')
+    } catch (err) {
+      console.error(err)
+      setSaveMessage('Failed to save item. Try again.')
+    }
   }
 
   const captureLocation = () => {
@@ -400,7 +473,7 @@ export default function Capture() {
     )
   }
 
-  const saveDisabled = vaultStatus !== 'unlocked' || !hasMedia
+  const saveDisabled = vaultStatus !== 'unlocked' || !hasMedia || !vaultKey
 
   return (
     <div className="space-y-8">
