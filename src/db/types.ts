@@ -7,6 +7,8 @@ export type VaultMeta = {
   salt?: string
   kdfParams?: VaultKdfParams
   wrappedVaultKey?: WrappedVaultKey
+  signingPublicKey?: string
+  wrappedSigningKey?: WrappedVaultKey
 }
 
 export type VaultKdfParams = {
