@@ -6,16 +6,16 @@ export default function Landing() {
   return (
     <div className="grid items-center gap-10 lg:grid-cols-[1.2fr_0.8fr]">
       <section className="space-y-8">
-        <div className="ev-stamp inline-flex items-center gap-3 rounded-full px-4 py-2 text-[0.6rem] font-semibold uppercase tracking-[0.4em] text-sand-600 shadow-[0_12px_24px_rgba(36,26,20,0.08)] dark:border-sand-700 dark:bg-sand-900/60 dark:text-sand-300">
+        <div className="ev-stamp inline-flex items-center gap-3 rounded-full px-4 py-2 text-[0.58rem] font-semibold uppercase tracking-[0.32em] text-sand-600 shadow-[0_12px_24px_rgba(36,26,20,0.08)] dark:border-sand-700 dark:bg-sand-900/60 dark:text-sand-300">
           <span className="h-2 w-2 rounded-full bg-amber-400" />
           Evidence Vault
         </div>
 
         <div className="space-y-4">
-          <h1 className="ev-hairline text-4xl font-semibold text-sand-900 dark:text-sand-50 lg:text-6xl">
+          <h1 className="ev-hairline text-4xl font-semibold text-sand-900 dark:text-sand-50 sm:text-5xl lg:text-6xl">
             Document safely, offline, and under your control.
           </h1>
-          <p className="max-w-xl text-base text-sand-600 dark:text-sand-300">
+          <p className="max-w-2xl text-base leading-relaxed text-sand-600 dark:text-sand-300 sm:text-lg">
             Capture testimony and media in a local vault, then export a tamper-evident bundle
             built for lawyers and journalists. No cloud, no account, no network required.
           </p>
@@ -25,7 +25,7 @@ export default function Landing() {
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-3">
           {[
             { label: 'Local only', detail: 'Encrypted at rest' },
             { label: 'Manual redaction', detail: 'Pixelate sensitive areas' },
@@ -33,7 +33,7 @@ export default function Landing() {
           ].map((item) => (
             <div
               key={item.label}
-              className="rounded-2xl border border-dashed border-sand-300/70 bg-white/70 p-4 text-sm text-sand-700 shadow-[0_12px_24px_rgba(36,26,20,0.06)] dark:border-sand-700 dark:bg-sand-900/60 dark:text-sand-200"
+              className="rounded-2xl border border-dashed border-sand-300/70 bg-white/70 p-4 text-sm text-sand-700 shadow-[0_12px_24px_rgba(36,26,20,0.06)] dark:border-sand-700 dark:bg-sand-900/60 dark:text-sand-200 sm:p-5"
             >
               <p className="ev-label text-[0.55rem] text-sand-500 dark:text-sand-400">
                 {item.label}

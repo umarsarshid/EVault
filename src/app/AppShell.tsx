@@ -15,7 +15,7 @@ const navItems = [
 ]
 
 const linkBase =
-  'relative rounded-full px-4 py-2 text-[0.6rem] font-semibold uppercase tracking-[0.32em] transition hover:-translate-y-0.5 hover:bg-sand-100 hover:text-sand-900 dark:hover:bg-sand-800 dark:hover:text-sand-100 font-mono'
+  'relative rounded-full px-4 py-2 text-[0.58rem] font-semibold uppercase tracking-[0.28em] transition hover:-translate-y-0.5 hover:bg-sand-100 hover:text-sand-900 dark:hover:bg-sand-800 dark:hover:text-sand-100 font-mono sm:text-[0.6rem]'
 
 const THEME_KEY = 'evvault-theme'
 
@@ -55,7 +55,7 @@ export default function AppShell() {
             <span className="hidden h-1.5 w-1.5 rounded-full bg-amber-400 sm:inline-block" />
             <span
               className={[
-                'rounded-full px-3 py-1 text-[0.55rem] font-semibold uppercase tracking-[0.25em] font-mono',
+                'rounded-full px-3 py-1 text-[0.52rem] font-semibold uppercase tracking-[0.22em] font-mono',
                 isLocked
                   ? 'bg-sand-900 text-white dark:bg-sand-100 dark:text-sand-900'
                   : 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100',
@@ -71,7 +71,7 @@ export default function AppShell() {
             {!isLocked && (
               <button
                 type="button"
-                className="rounded-full border border-dashed border-sand-400/70 bg-white/60 px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.25em] text-sand-700 transition hover:-translate-y-0.5 hover:border-sand-500 dark:border-sand-700 dark:bg-sand-900/60 dark:text-sand-200 dark:hover:border-sand-500"
+                className="rounded-full border border-dashed border-sand-400/70 bg-white/60 px-3 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.22em] text-sand-700 transition hover:-translate-y-0.5 hover:border-sand-500 dark:border-sand-700 dark:bg-sand-900/60 dark:text-sand-200 dark:hover:border-sand-500"
                 onClick={lockVault}
               >
                 Lock
@@ -79,7 +79,7 @@ export default function AppShell() {
             )}
             <button
               type="button"
-              className="rounded-full border border-dashed border-sand-400/70 bg-white/60 px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.25em] text-sand-700 transition hover:-translate-y-0.5 hover:border-sand-500 dark:border-sand-700 dark:bg-sand-900/60 dark:text-sand-200 dark:hover:border-sand-500"
+              className="rounded-full border border-dashed border-sand-400/70 bg-white/60 px-3 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.22em] text-sand-700 transition hover:-translate-y-0.5 hover:border-sand-500 dark:border-sand-700 dark:bg-sand-900/60 dark:text-sand-200 dark:hover:border-sand-500"
               onClick={() => setTheme(isDark ? 'light' : 'dark')}
             >
               {isDark ? 'Light mode' : 'Dark mode'}
