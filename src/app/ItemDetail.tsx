@@ -2,19 +2,31 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import Button from '../components/Button'
 import Card from '../components/Card'
-import { db, type EvidenceItem } from '../db'
+import { db, type CustodyEvent, type EvidenceItem } from '../db'
 import { decryptBlob, encryptBlob } from '../crypto/blob'
-import { appendCustodyEvent } from '../custody'
 import RedactionCanvas, { type RedactionRect } from '../redact/RedactionCanvas'
 import { pixelateImage } from '../redact/pixelate'
+import { appendCustodyEvent } from '../custody'
 import { useVault } from './VaultContext'
 
 type PreviewMode = 'original' | 'redacted'
+
+const formatEventTime = (timestamp: number) =>
+  new Date(timestamp).toLocaleString(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })
+
+const truncateHash = (hash?: string) => {
+  if (!hash) return '—'
+  return `${hash.slice(0, 12)}…${hash.slice(-6)}`
+}
 
 export default function ItemDetail() {
   const { id } = useParams()
   const { vaultKey } = useVault()
   const [item, setItem] = useState<EvidenceItem | null>(null)
+  const [events, setEvents] = useState<CustodyEvent[]>([])
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [redactedUrl, setRedactedUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -23,6 +35,7 @@ export default function ItemDetail() {
   const [redactionMessage, setRedactionMessage] = useState<string | null>(null)
   const [isSavingRedaction, setIsSavingRedaction] = useState(false)
   const [previewMode, setPreviewMode] = useState<PreviewMode>('original')
+  const [copiedHash, setCopiedHash] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -35,8 +48,11 @@ export default function ItemDetail() {
       }
 
       const record = await db.items.get(id)
+      const custody = await db.custody_events.where('itemId').equals(id).sortBy('ts')
+
       if (mounted) {
         setItem(record ?? null)
+        setEvents(custody)
         setIsLoading(false)
       }
     }
@@ -178,7 +194,10 @@ export default function ItemDetail() {
       }
 
       setItem(updatedItem)
-      await appendCustodyEvent({
+      setPreviewMode('redacted')
+      setRedactionMessage('Redacted copy saved.')
+
+      const custodyEvent = await appendCustodyEvent({
         itemId: item.id,
         action: 'redact',
         vaultKey,
@@ -187,13 +206,24 @@ export default function ItemDetail() {
           rectCount: rects.length,
         },
       })
-      setPreviewMode('redacted')
-      setRedactionMessage('Redacted copy saved.')
+
+      setEvents((prev) => [...prev, custodyEvent])
     } catch (err) {
       console.error(err)
       setRedactionMessage('Unable to save redacted copy.')
     } finally {
       setIsSavingRedaction(false)
+    }
+  }
+
+  const handleCopyHash = async (hash?: string) => {
+    if (!hash) return
+    try {
+      await navigator.clipboard.writeText(hash)
+      setCopiedHash(hash)
+      window.setTimeout(() => setCopiedHash(null), 1500)
+    } catch (err) {
+      console.error(err)
     }
   }
 
@@ -305,52 +335,92 @@ export default function ItemDetail() {
             )}
           </Card>
 
-          <Card title="Metadata" description="Captured details">
-            <div className="space-y-3 text-sm text-sand-700 dark:text-sand-300">
-              <div>
-                <span className="font-semibold text-sand-900 dark:text-sand-50">What:</span>{' '}
-                {item.metadata.what || '—'}
+          <div className="space-y-6">
+            <Card title="Metadata" description="Captured details">
+              <div className="space-y-3 text-sm text-sand-700 dark:text-sand-300">
+                <div>
+                  <span className="font-semibold text-sand-900 dark:text-sand-50">What:</span>{' '}
+                  {item.metadata.what || '—'}
+                </div>
+                <div>
+                  <span className="font-semibold text-sand-900 dark:text-sand-50">When:</span>{' '}
+                  {new Date(item.capturedAt).toLocaleString()}
+                </div>
+                <div>
+                  <span className="font-semibold text-sand-900 dark:text-sand-50">Where:</span>{' '}
+                  {item.metadata.where || '—'}
+                </div>
+                {item.metadata.notes && (
+                  <div>
+                    <span className="font-semibold text-sand-900 dark:text-sand-50">Notes:</span>{' '}
+                    {item.metadata.notes}
+                  </div>
+                )}
+                {item.location && (
+                  <div>
+                    <span className="font-semibold text-sand-900 dark:text-sand-50">Location:</span>{' '}
+                    {item.location.lat}, {item.location.lon}
+                  </div>
+                )}
+                {item.type === 'photo' && (
+                  <div>
+                    <span className="font-semibold text-sand-900 dark:text-sand-50">Redactions:</span>{' '}
+                    {rects.length} region{rects.length === 1 ? '' : 's'}
+                  </div>
+                )}
+                {item.redactedBlob && (
+                  <div>
+                    <span className="font-semibold text-sand-900 dark:text-sand-50">
+                      Redacted copy:
+                    </span>{' '}
+                    {item.redactedMime} · {Math.round((item.redactedSize ?? 0) / 1024)} KB
+                  </div>
+                )}
               </div>
-              <div>
-                <span className="font-semibold text-sand-900 dark:text-sand-50">When:</span>{' '}
-                {new Date(item.capturedAt).toLocaleString()}
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Button variant="outline">Add notes</Button>
+                <Button variant="ghost">Open redaction</Button>
               </div>
-              <div>
-                <span className="font-semibold text-sand-900 dark:text-sand-50">Where:</span>{' '}
-                {item.metadata.where || '—'}
-              </div>
-              {item.metadata.notes && (
-                <div>
-                  <span className="font-semibold text-sand-900 dark:text-sand-50">Notes:</span>{' '}
-                  {item.metadata.notes}
+            </Card>
+
+            <Card title="Custody timeline" description="Tamper-evident event history">
+              {events.length === 0 ? (
+                <p className="text-sm text-sand-600 dark:text-sand-400">
+                  No custody events recorded yet.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {events.map((event) => (
+                    <div
+                      key={event.id}
+                      className="rounded-2xl border border-sand-200 bg-white/60 p-3 text-xs text-sand-700 dark:border-sand-700 dark:bg-sand-900/60 dark:text-sand-300"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-semibold text-sand-900 dark:text-sand-100">
+                          {event.action.toUpperCase()}
+                        </span>
+                        <span className="text-sand-500 dark:text-sand-400">
+                          {formatEventTime(event.ts)}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="rounded-full border border-sand-200 px-2 py-0.5 dark:border-sand-700">
+                          {truncateHash(event.hash)}
+                        </span>
+                        <button
+                          type="button"
+                          className="rounded-full border border-sand-200 px-2 py-0.5 text-xs text-sand-600 transition hover:border-sand-400 dark:border-sand-700 dark:text-sand-300 dark:hover:border-sand-500"
+                          onClick={() => handleCopyHash(event.hash)}
+                        >
+                          {copiedHash === event.hash ? 'Copied' : 'Copy hash'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
-              {item.location && (
-                <div>
-                  <span className="font-semibold text-sand-900 dark:text-sand-50">Location:</span>{' '}
-                  {item.location.lat}, {item.location.lon}
-                </div>
-              )}
-              {item.type === 'photo' && (
-                <div>
-                  <span className="font-semibold text-sand-900 dark:text-sand-50">Redactions:</span>{' '}
-                  {rects.length} region{rects.length === 1 ? '' : 's'}
-                </div>
-              )}
-              {item.redactedBlob && (
-                <div>
-                  <span className="font-semibold text-sand-900 dark:text-sand-50">
-                    Redacted copy:
-                  </span>{' '}
-                  {item.redactedMime} · {Math.round((item.redactedSize ?? 0) / 1024)} KB
-                </div>
-              )}
-            </div>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <Button variant="outline">Add notes</Button>
-              <Button variant="ghost">Open redaction</Button>
-            </div>
-          </Card>
+            </Card>
+          </div>
         </div>
       ) : (
         <Card title="Not found" description="No matching evidence item." />
