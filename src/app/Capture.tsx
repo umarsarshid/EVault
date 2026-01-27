@@ -160,6 +160,38 @@ export default function Capture() {
     setError(null)
   }
 
+  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (photoUrl) {
+      URL.revokeObjectURL(photoUrl)
+    }
+    if (videoUrl) {
+      URL.revokeObjectURL(videoUrl)
+    }
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl)
+    }
+
+    if (file.type.startsWith('image/')) {
+      setPhotoBlob(file)
+      setPhotoUrl(URL.createObjectURL(file))
+    } else if (file.type.startsWith('video/')) {
+      setVideoBlob(file)
+      setVideoUrl(URL.createObjectURL(file))
+      setVideoBytes(file.size)
+    } else if (file.type.startsWith('audio/')) {
+      setAudioBlob(file)
+      setAudioUrl(URL.createObjectURL(file))
+      setAudioBytes(file.size)
+    } else {
+      setError('Unsupported file type.')
+    }
+
+    event.target.value = ''
+  }
+
   const resetVideoState = () => {
     if (videoUrl) {
       URL.revokeObjectURL(videoUrl)
@@ -313,7 +345,7 @@ export default function Capture() {
           Record new evidence
         </h1>
         <p className="text-sm text-sand-700 dark:text-sand-300">
-          Capture a photo or a short video clip. Raw blobs stay in memory for now.
+          Capture a photo, audio note, or short video clip. Raw blobs stay in memory for now.
         </p>
       </header>
 
@@ -400,9 +432,24 @@ export default function Capture() {
                   <span className="font-mono">▂▅▃▆▁▇▂▆▃▅▂▃</span>
                 </div>
               </div>
-              {audioUrl && (
-                <audio src={audioUrl} controls className="w-full" />
-              )}
+              {audioUrl && <audio src={audioUrl} controls className="w-full" />}
+            </div>
+          </Card>
+
+          <Card
+            title="Fallback import"
+            description="Use a file from your device if camera APIs are limited."
+          >
+            <div className="space-y-3">
+              <input
+                type="file"
+                accept="image/*,video/*,audio/*"
+                onChange={handleImport}
+                className="block w-full text-sm text-sand-600 file:mr-4 file:rounded-full file:border-0 file:bg-sand-900 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-sand-800 dark:text-sand-300 dark:file:bg-sand-100 dark:file:text-sand-900 dark:hover:file:bg-sand-200"
+              />
+              <p className="text-xs text-sand-600 dark:text-sand-400">
+                Imported files stay in memory until you save them to the vault.
+              </p>
             </div>
           </Card>
         </div>
