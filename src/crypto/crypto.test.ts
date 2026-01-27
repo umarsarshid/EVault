@@ -7,6 +7,7 @@ import { getSodium } from './sodium'
 describe('crypto helpers', () => {
   beforeEach(async () => {
     await db.delete()
+    await db.open()
   })
 
   it('roundtrips encrypted blobs', async () => {
