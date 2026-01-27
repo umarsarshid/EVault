@@ -1,12 +1,21 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Serif:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap");
 @import "tailwindcss";
 @config "../tailwind.config.cjs";
 
 @layer base {
   :root {
     color-scheme: light;
-    font-family: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
-    color: #101820;
-    background-color: #f6f1e7;
+    --ev-paper: #f7f1e5;
+    --ev-paper-strong: #eadfce;
+    --ev-ink: #241a14;
+    --ev-ink-muted: #6f6157;
+    --ev-accent: #c2542f;
+    --ev-accent-strong: #8e3a1f;
+    --ev-line: rgba(36, 26, 20, 0.08);
+    --ev-glow: rgba(194, 84, 47, 0.18);
+    font-family: "IBM Plex Serif", "Space Grotesk", serif;
+    color: var(--ev-ink);
+    background-color: var(--ev-paper);
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
@@ -15,6 +24,14 @@
 
   html.dark {
     color-scheme: dark;
+    --ev-paper: #0f0b08;
+    --ev-paper-strong: #1a1410;
+    --ev-ink: #f6efe6;
+    --ev-ink-muted: #b9aca0;
+    --ev-accent: #e28f64;
+    --ev-accent-strong: #f0b08a;
+    --ev-line: rgba(246, 239, 230, 0.08);
+    --ev-glow: rgba(226, 143, 100, 0.18);
   }
 
   *,
@@ -26,11 +43,54 @@
   body {
     margin: 0;
     min-height: 100vh;
-    background: radial-gradient(circle at top, #ffffff 0%, #f6f1e7 45%, #e8ddcc 100%);
+    background-color: var(--ev-paper);
+    background-image:
+      linear-gradient(0deg, rgba(36, 26, 20, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(36, 26, 20, 0.03) 1px, transparent 1px),
+      radial-gradient(circle at 18% 10%, rgba(255, 255, 255, 0.7) 0%, transparent 45%),
+      radial-gradient(circle at 78% 5%, rgba(194, 84, 47, 0.12) 0%, transparent 50%);
+    background-size: 48px 48px, 48px 48px, auto, auto;
+    background-attachment: fixed;
+    position: relative;
   }
 
   html.dark body {
-    background: radial-gradient(circle at top, #2a241d 0%, #191612 45%, #0f0d0a 100%);
+    background-color: var(--ev-paper);
+    background-image:
+      linear-gradient(0deg, rgba(248, 243, 234, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(248, 243, 234, 0.03) 1px, transparent 1px),
+      radial-gradient(circle at 18% 0%, rgba(83, 60, 42, 0.6) 0%, transparent 45%),
+      radial-gradient(circle at 78% 0%, rgba(226, 143, 100, 0.12) 0%, transparent 45%);
+    background-size: 56px 56px, 56px 56px, auto, auto;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(circle, rgba(36, 26, 20, 0.03) 1px, transparent 1px);
+    background-size: 3px 3px;
+    opacity: 0.25;
+    z-index: -1;
+  }
+
+  html.dark body::before {
+    background-image: radial-gradient(circle, rgba(246, 239, 230, 0.04) 1px, transparent 1px);
+    opacity: 0.2;
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(circle at 12% 24%, var(--ev-glow) 0%, transparent 45%),
+      radial-gradient(circle at 90% 35%, rgba(36, 26, 20, 0.06) 0%, transparent 60%);
+    mix-blend-mode: multiply;
+    opacity: 0.5;
+    z-index: -1;
   }
 
   a {
@@ -40,5 +100,94 @@
 
   #root {
     min-height: 100vh;
+    position: relative;
+    z-index: 0;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: "IBM Plex Serif", "Space Grotesk", serif;
+    letter-spacing: -0.01em;
+  }
+
+  ::selection {
+    background: rgba(194, 84, 47, 0.25);
+  }
+}
+
+@layer utilities {
+  .ev-hairline {
+    position: relative;
+  }
+
+  .ev-hairline::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -8px;
+    width: 64px;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--ev-accent), transparent);
+  }
+
+  .ev-label {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.35em;
+  }
+
+  .ev-stamp {
+    border: 1px solid var(--ev-accent);
+    color: var(--ev-accent);
+    box-shadow: inset 0 0 0 1px rgba(194, 84, 47, 0.35);
+    background: rgba(194, 84, 47, 0.08);
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  @keyframes ev-fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes ev-float {
+    0% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+    100% {
+      transform: translateY(0);
+    }
+  }
+
+  .ev-fade-up {
+    animation: ev-fade-up 0.6s ease-out both;
+  }
+
+  .ev-float {
+    animation: ev-float 16s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ev-fade-up,
+    .ev-float {
+      animation: none;
+    }
   }
 }

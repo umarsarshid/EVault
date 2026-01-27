@@ -82,18 +82,19 @@ export const verifyJs = `(() => {
       const results = []
       for (const file of files) {
         const key = normalizeKey(file)
-        const expectedHash = expected.get(key) || expected.get(`media/${file.name}`) || expected.get(file.name)
+        const expectedHash = expected.get(key) || expected.get('media/' + file.name) || expected.get(file.name)
         if (!expectedHash) {
-          results.push(`${key}: no matching entry in manifest`)
+          results.push(key + ': no matching entry in manifest')
           continue
         }
         const actual = await hashFile(file)
-        results.push(`${key}: ${actual === expectedHash ? 'OK' : 'MISMATCH'}`)
+        results.push(key + ': ' + (actual === expectedHash ? 'OK' : 'MISMATCH'))
       }
 
       output.textContent = results.join('\\n') || 'No files verified.'
     } catch (err) {
-      output.textContent = 'Verification failed: ' + (err && err.message ? err.message : err)
+      output.textContent =
+        'Verification failed: ' + (err && err.message ? err.message : err)
     }
   })
 })()

@@ -17,8 +17,14 @@ module.exports = {
           900: '#24160f',
         },
       },
+      fontFamily: {
+        sans: ['"IBM Plex Serif"', 'serif'],
+        display: ['"IBM Plex Serif"', '"Space Grotesk"', 'serif'],
+        mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
+      },
       boxShadow: {
-        soft: '0 24px 60px rgba(17, 24, 39, 0.12)',
+        soft: '0 24px 60px rgba(15, 23, 42, 0.14)',
+        lift: '0 20px 40px rgba(15, 23, 42, 0.18)',
       },
     },
   },
