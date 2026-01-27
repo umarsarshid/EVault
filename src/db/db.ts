@@ -34,6 +34,33 @@ export class EvidenceVaultDB extends Dexie {
             }
           })
       )
+
+    this.version(3)
+      .stores({
+        vault_meta: 'id, createdAt, updatedAt',
+        items: 'id, createdAt, capturedAt, type',
+        custody_events: 'id, itemId, ts, action',
+        settings: '&key, updatedAt',
+      })
+      .upgrade((tx) =>
+        tx
+          .table('custody_events')
+          .toCollection()
+          .modify((event) => {
+            if (event.timestamp && !event.ts) {
+              event.ts = event.timestamp
+            }
+            if (event.type && !event.action) {
+              event.action = event.type
+            }
+            if (!event.details && event.note) {
+              event.details = { note: event.note }
+            }
+            delete event.timestamp
+            delete event.type
+            delete event.note
+          })
+      )
   }
 }
 

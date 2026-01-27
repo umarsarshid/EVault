@@ -1,6 +1,7 @@
 export { db, EvidenceVaultDB } from './db'
 export type {
   CustodyEvent,
+  CustodyEventAction,
   EvidenceItem,
   ItemLocation,
   ItemMetadata,

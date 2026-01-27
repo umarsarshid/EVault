@@ -34,12 +34,17 @@ export type EvidenceItem = {
   updatedAt?: number
 }
 
+export type CustodyEventAction = 'capture' | 'redact' | 'export' | 'verify'
+
 export type CustodyEvent = {
   id: string
   itemId: string
-  type: 'capture' | 'redact' | 'export' | 'verify'
-  timestamp: number
-  note?: string
+  ts: number
+  action: CustodyEventAction
+  details?: Record<string, unknown>
+  prevHash?: string
+  hash?: string
+  signature?: string
 }
 
 export type Setting = {
