@@ -12,14 +12,13 @@ export default function Landing() {
     navigate('/vault')
   }
 
-  const handleInstall = () => {
+  const handleInstall = async () => {
     if (typeof window === 'undefined') return
     const prompt = window.__evvaultInstallPrompt
     if (prompt) {
-      void prompt.prompt()
-      prompt.userChoice.finally(() => {
-        window.__evvaultInstallPrompt = undefined
-      })
+      await prompt.prompt()
+      await prompt.userChoice
+      window.__evvaultInstallPrompt = null
       return
     }
     scrollToSection('install')
@@ -52,7 +51,13 @@ export default function Landing() {
               built for lawyers and journalists. No cloud, no account, no network required.
             </p>
             <div className="flex flex-wrap gap-3">
-              <Button onClick={handleInstall}>Install as App</Button>
+              <Button
+                onClick={() => {
+                  void handleInstall()
+                }}
+              >
+                Install as App
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => window.open(githubUrl, '_blank', 'noopener,noreferrer')}

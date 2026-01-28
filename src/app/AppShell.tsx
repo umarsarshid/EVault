@@ -73,7 +73,7 @@ export default function AppShell() {
       setIsInstalled(true)
       setInstallPrompt(null)
       if (typeof window !== 'undefined') {
-        window.__evvaultInstallPrompt = undefined
+        window.__evvaultInstallPrompt = null
       }
     }
 
@@ -92,7 +92,7 @@ export default function AppShell() {
     await installPrompt.userChoice
     setInstallPrompt(null)
     if (typeof window !== 'undefined') {
-      window.__evvaultInstallPrompt = undefined
+      window.__evvaultInstallPrompt = null
     }
   }
 
