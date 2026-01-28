@@ -54,6 +54,7 @@ The output is in `dist/`. Upload the contents of that folder to your host.
 - libsodium (client-side crypto)
 - fflate (ZIP exports)
 - vite-plugin-pwa (offline caching + installable app)
+- MediaPipe Tasks Vision (on-device face detection)
 
 ## Why this exists
 
@@ -61,6 +62,14 @@ Evidence Vault is designed for offline-first documentation when cloud uploads ar
 impossible. The MVP focuses on local control, explicit user actions, and verifiable exports.
 
 See `docs/WHY.md` for the full rationale and tool choices.
+
+## MediaPipe assets (auto face blur)
+
+To keep face detection fully offline, MediaPipe model + WASM assets are served from the same
+origin as the app. Place them under `public/mediapipe/` (e.g. the WASM binary and the face
+detector model) and load them via MediaPipe’s `FilesetResolver.forVisionTasks` pointing at
+`/mediapipe`. This avoids third-party CDNs, keeps everything cacheable by the PWA, and stays
+compatible with COOP/COEP when enabled.
 
 ## What this app is / isn't
 
