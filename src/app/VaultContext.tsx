@@ -24,6 +24,7 @@ type VaultContextValue = {
 const VaultContext = createContext<VaultContextValue | null>(null)
 
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000
+const IDLE_CHECK_INTERVAL_MS = 15 * 1000
 const activityEvents = ['pointerdown', 'keydown', 'mousemove', 'touchstart', 'focus']
 
 export function VaultProvider({ children }: { children: ReactNode }) {
@@ -64,12 +65,14 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (vaultStatus !== 'unlocked') return
 
-    // Placeholder auto-lock: after inactivity, return to locked state.
-    const timeoutId = window.setTimeout(() => {
-      lockVault()
-    }, IDLE_TIMEOUT_MS)
+    const intervalId = window.setInterval(() => {
+      const idleFor = Date.now() - lastActivityAt
+      if (idleFor >= IDLE_TIMEOUT_MS) {
+        lockVault()
+      }
+    }, IDLE_CHECK_INTERVAL_MS)
 
-    return () => window.clearTimeout(timeoutId)
+    return () => window.clearInterval(intervalId)
   }, [vaultStatus, lastActivityAt, lockVault])
 
   const value = useMemo(

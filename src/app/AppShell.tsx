@@ -110,7 +110,7 @@ export default function AppShell() {
               {vaultStatus.toUpperCase()}
             </span>
             <span className="hidden text-sand-500 dark:text-sand-400 sm:inline">
-              Auto-lock after {idleMinutes} min idle (placeholder)
+              Auto-lock after {idleMinutes} min idle
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -120,7 +120,7 @@ export default function AppShell() {
                 className="rounded-full border border-dashed border-sand-400/70 bg-white/60 px-3 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.22em] text-sand-700 transition hover:-translate-y-0.5 hover:border-sand-500 dark:border-sand-700 dark:bg-sand-900/60 dark:text-sand-200 dark:hover:border-sand-500"
                 onClick={lockVault}
               >
-                Lock
+                Quick lock
               </button>
             )}
             <button
