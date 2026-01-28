@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
+import Button from '../components/Button'
 import { useVault } from './VaultContext'
 
 type ThemeMode = 'light' | 'dark'
+
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
+}
 
 const navItems = [
   { label: 'Landing', to: '/' },
@@ -32,12 +38,52 @@ export default function AppShell() {
   const idleMinutes = Math.round(idleTimeoutMs / 60000)
   const [theme, setTheme] = useState<ThemeMode>(() => getInitialTheme())
   const isDark = theme === 'dark'
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [isInstalled, setIsInstalled] = useState(false)
 
   useEffect(() => {
     const root = document.documentElement
     root.classList.toggle('dark', isDark)
     window.localStorage.setItem(THEME_KEY, theme)
   }, [isDark, theme])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      // @ts-expect-error navigator.standalone is iOS-specific
+      (window.navigator && window.navigator.standalone)
+
+    if (isStandalone) {
+      setIsInstalled(true)
+    }
+
+    const handleBeforeInstall = (event: Event) => {
+      event.preventDefault()
+      setInstallPrompt(event as BeforeInstallPromptEvent)
+    }
+
+    const handleInstalled = () => {
+      setIsInstalled(true)
+      setInstallPrompt(null)
+    }
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall)
+    window.addEventListener('appinstalled', handleInstalled)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall)
+      window.removeEventListener('appinstalled', handleInstalled)
+    }
+  }, [])
+
+  const handleInstallClick = async () => {
+    if (!installPrompt) return
+    await installPrompt.prompt()
+    await installPrompt.userChoice
+    setInstallPrompt(null)
+  }
 
   return (
     <div className="min-h-screen text-sand-900 dark:text-sand-50">
@@ -124,6 +170,30 @@ export default function AppShell() {
           </nav>
         </div>
       </header>
+      {installPrompt && !isInstalled && (
+        <div className="mx-auto w-full max-w-6xl px-4 pt-6 sm:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-dashed border-sand-300/70 bg-white/70 px-4 py-4 text-sand-700 shadow-[0_14px_30px_rgba(36,26,20,0.08)] dark:border-sand-700 dark:bg-sand-900/60 dark:text-sand-200 sm:px-6">
+            <div className="space-y-1">
+              <p className="ev-label text-[0.55rem] text-sand-500 dark:text-sand-400">
+                Install Evidence Vault
+              </p>
+              <p className="text-sm text-sand-700 dark:text-sand-200">
+                Add the app to your home screen for offline access.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={handleInstallClick}>Install Evidence Vault</Button>
+              <button
+                type="button"
+                className="rounded-full border border-dashed border-sand-400/70 bg-white/60 px-4 py-2 text-[0.58rem] font-semibold uppercase tracking-[0.24em] text-sand-700 transition hover:-translate-y-0.5 hover:border-sand-500 dark:border-sand-700 dark:bg-sand-900/60 dark:text-sand-200 dark:hover:border-sand-500"
+                onClick={() => setInstallPrompt(null)}
+              >
+                Not now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 ev-fade-up">
         <Outlet />
       </main>

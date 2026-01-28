@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['vite.svg'],
+      includeAssets: ['vite.svg', 'icons/evvault-icon.svg', 'icons/evvault-icon-maskable.svg'],
       manifest: {
         name: 'Evidence Vault',
         short_name: 'EvidenceVault',
@@ -18,10 +18,16 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: '/vite.svg',
-            sizes: '512x512',
+            src: '/icons/evvault-icon.svg',
+            sizes: 'any',
             type: 'image/svg+xml',
             purpose: 'any',
+          },
+          {
+            src: '/icons/evvault-icon-maskable.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
+            purpose: 'maskable',
           },
         ],
       },
