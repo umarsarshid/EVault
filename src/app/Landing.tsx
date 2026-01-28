@@ -1,8 +1,18 @@
+import { useNavigate } from 'react-router-dom'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import Input from '../components/Input'
+import { useVault } from './VaultContext'
 
 export default function Landing() {
+  const navigate = useNavigate()
+  const { enterDemoMode, isSwitchingMode } = useVault()
+
+  const handleEnterDemo = () => {
+    enterDemoMode()
+    navigate('/vault')
+  }
+
   return (
     <div className="grid items-center gap-10 lg:grid-cols-[1.2fr_0.8fr]">
       <section className="space-y-8">
@@ -20,8 +30,13 @@ export default function Landing() {
             built for lawyers and journalists. No cloud, no account, no network required.
           </p>
           <div className="flex flex-wrap gap-3">
-            <Button>Create vault</Button>
-            <Button variant="outline">Open a demo bundle</Button>
+            <Button onClick={() => navigate('/vault/new')}>Create vault</Button>
+            <Button variant="outline" onClick={() => navigate('/export')}>
+              Open a demo bundle
+            </Button>
+            <Button variant="ghost" onClick={handleEnterDemo} disabled={isSwitchingMode}>
+              Enter demo vault
+            </Button>
           </div>
         </div>
 
@@ -88,8 +103,10 @@ export default function Landing() {
             <Input placeholder="Vault name" />
             <Input type="password" placeholder="Passphrase" />
             <div className="flex flex-wrap gap-3">
-              <Button>Create vault</Button>
-              <Button variant="outline">Preview capture</Button>
+              <Button onClick={() => navigate('/vault/new')}>Create vault</Button>
+              <Button variant="outline" onClick={() => navigate('/capture')}>
+                Preview capture
+              </Button>
             </div>
             <p className="text-xs text-sand-600 dark:text-sand-400">
               Evidence stays encrypted until you export a bundle for review.

@@ -7,8 +7,8 @@ export class EvidenceVaultDB extends Dexie {
   custody_events!: Table<CustodyEvent, string>
   settings!: Table<Setting, string>
 
-  constructor() {
-    super('evidence_vault')
+  constructor(name = 'evidence_vault') {
+    super(name)
 
     this.version(1).stores({
       vault_meta: 'id, createdAt, updatedAt',
@@ -64,4 +64,19 @@ export class EvidenceVaultDB extends Dexie {
   }
 }
 
-export const db = new EvidenceVaultDB()
+const primaryDb = new EvidenceVaultDB('evidence_vault')
+const demoDb = new EvidenceVaultDB('evidence_vault_demo')
+
+export type VaultDbMode = 'real' | 'demo'
+
+export let db = primaryDb
+
+export const setActiveDb = (mode: VaultDbMode) => {
+  const next = mode === 'demo' ? demoDb : primaryDb
+  if (db !== next) {
+    db.close()
+    db = next
+  }
+}
+
+export const getActiveDbMode = (): VaultDbMode => (db === demoDb ? 'demo' : 'real')

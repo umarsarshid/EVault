@@ -7,6 +7,8 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { loadDemoVault } from '../demo/demoVault'
+import { setActiveDb, type VaultDbMode } from '../db'
 
 type VaultStatus = 'locked' | 'unlocked'
 
@@ -19,6 +21,11 @@ type VaultContextValue = {
   idleTimeoutMs: number
   lastActivityAt: number
   resetIdleTimer: () => void
+  mode: VaultDbMode
+  isDemoMode: boolean
+  isSwitchingMode: boolean
+  enterDemoMode: () => void
+  exitDemoMode: () => void
 }
 
 const VaultContext = createContext<VaultContextValue | null>(null)
@@ -26,11 +33,20 @@ const VaultContext = createContext<VaultContextValue | null>(null)
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000
 const IDLE_CHECK_INTERVAL_MS = 15 * 1000
 const activityEvents = ['pointerdown', 'keydown', 'mousemove', 'touchstart', 'focus']
+const MODE_KEY = 'evvault-mode'
+
+const getInitialMode = (): VaultDbMode => {
+  if (typeof window === 'undefined') return 'real'
+  const stored = window.localStorage.getItem(MODE_KEY)
+  return stored === 'demo' ? 'demo' : 'real'
+}
 
 export function VaultProvider({ children }: { children: ReactNode }) {
   const [vaultStatus, setVaultStatus] = useState<VaultStatus>('locked')
   const [vaultKey, setVaultKeyState] = useState<Uint8Array | null>(null)
   const [lastActivityAt, setLastActivityAt] = useState(() => Date.now())
+  const [mode, setMode] = useState<VaultDbMode>(() => getInitialMode())
+  const [isSwitchingMode, setIsSwitchingMode] = useState(false)
 
   const resetIdleTimer = useCallback(() => {
     setLastActivityAt(Date.now())
@@ -48,6 +64,22 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     setVaultStatus('locked')
   }, [vaultKey])
 
+  const enterDemoMode = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(MODE_KEY, 'demo')
+    }
+    lockVault()
+    setMode('demo')
+  }, [lockVault])
+
+  const exitDemoMode = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(MODE_KEY, 'real')
+    }
+    lockVault()
+    setMode('real')
+  }, [lockVault])
+
   useEffect(() => {
     const handleActivity = () => resetIdleTimer()
 
@@ -61,6 +93,38 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       })
     }
   }, [resetIdleTimer])
+
+  useEffect(() => {
+    let active = true
+
+    const loadDemo = async () => {
+      setIsSwitchingMode(true)
+      try {
+        setActiveDb('demo')
+        const key = await loadDemoVault()
+        if (!active) return
+        setVaultKeyState(key)
+        setVaultStatus('unlocked')
+        resetIdleTimer()
+      } catch (err) {
+        console.error(err)
+      } finally {
+        if (active) {
+          setIsSwitchingMode(false)
+        }
+      }
+    }
+
+    if (mode === 'demo') {
+      void loadDemo()
+    } else {
+      setActiveDb('real')
+    }
+
+    return () => {
+      active = false
+    }
+  }, [mode, resetIdleTimer])
 
   useEffect(() => {
     if (vaultStatus !== 'unlocked') return
@@ -85,8 +149,24 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       idleTimeoutMs: IDLE_TIMEOUT_MS,
       lastActivityAt,
       resetIdleTimer,
+      mode,
+      isDemoMode: mode === 'demo',
+      isSwitchingMode,
+      enterDemoMode,
+      exitDemoMode,
     }),
-    [vaultStatus, vaultKey, setVaultKey, lockVault, lastActivityAt, resetIdleTimer]
+    [
+      vaultStatus,
+      vaultKey,
+      setVaultKey,
+      lockVault,
+      lastActivityAt,
+      resetIdleTimer,
+      mode,
+      isSwitchingMode,
+      enterDemoMode,
+      exitDemoMode,
+    ]
   )
 
   return <VaultContext.Provider value={value}>{children}</VaultContext.Provider>

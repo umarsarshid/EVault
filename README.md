@@ -17,6 +17,12 @@ Open `http://localhost:5173`.
 pnpm test
 ```
 
+## Demo mode (portfolio)
+
+Use the “Enter demo vault” button on the landing page to load a safe, fake dataset in a
+separate local database. Demo data never mixes with real vault data. Use “Exit demo” in the
+header to return to the real vault.
+
 ## Deployment (portfolio site)
 
 Build the app as static files and host anywhere (Netlify, Vercel, GitHub Pages, or a simple

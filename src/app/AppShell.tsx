@@ -33,7 +33,8 @@ const getInitialTheme = (): ThemeMode => {
 }
 
 export default function AppShell() {
-  const { vaultStatus, idleTimeoutMs, lockVault } = useVault()
+  const { vaultStatus, idleTimeoutMs, lockVault, isDemoMode, exitDemoMode, isSwitchingMode } =
+    useVault()
   const isLocked = vaultStatus === 'locked'
   const idleMinutes = Math.round(idleTimeoutMs / 60000)
   const [theme, setTheme] = useState<ThemeMode>(() => getInitialTheme())
@@ -99,6 +100,11 @@ export default function AppShell() {
               Evidence Vault
             </span>
             <span className="hidden h-1.5 w-1.5 rounded-full bg-amber-400 sm:inline-block" />
+            {isDemoMode && (
+              <span className="ev-stamp rounded-full px-3 py-1 text-[0.52rem] font-semibold uppercase tracking-[0.25em] text-sand-700 dark:border-sand-600 dark:text-sand-200">
+                Demo mode
+              </span>
+            )}
             <span
               className={[
                 'rounded-full px-3 py-1 text-[0.52rem] font-semibold uppercase tracking-[0.22em] font-mono',
@@ -114,6 +120,16 @@ export default function AppShell() {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            {isDemoMode && (
+              <button
+                type="button"
+                className="rounded-full border border-dashed border-sand-400/70 bg-white/60 px-3 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.22em] text-sand-700 transition hover:-translate-y-0.5 hover:border-sand-500 dark:border-sand-700 dark:bg-sand-900/60 dark:text-sand-200 dark:hover:border-sand-500"
+                onClick={exitDemoMode}
+                disabled={isSwitchingMode}
+              >
+                Exit demo
+              </button>
+            )}
             {!isLocked && (
               <button
                 type="button"
