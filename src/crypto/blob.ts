@@ -44,5 +44,8 @@ export async function decryptBlob(vaultKey: Uint8Array, encrypted: EncryptedBlob
     throw new Error('Failed to decrypt blob')
   }
 
-  return new Blob([plaintext], { type: encrypted.mime || 'application/octet-stream' })
+  const copy = new Uint8Array(plaintext.byteLength)
+  copy.set(plaintext)
+
+  return new Blob([copy.buffer], { type: encrypted.mime || 'application/octet-stream' })
 }

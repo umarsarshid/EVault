@@ -178,7 +178,7 @@ export default function ItemDetail() {
         },
       })
 
-      const updatedItem = {
+      const updatedItem: EvidenceItem = {
         ...item,
         redactedBlob: {
           nonce: encrypted.nonce,
@@ -187,7 +187,7 @@ export default function ItemDetail() {
         redactedMime: encrypted.mime,
         redactedSize: encrypted.size,
         redaction: {
-          method: 'pixelate',
+          method: 'pixelate' as const,
           rects,
           createdAt: now,
         },

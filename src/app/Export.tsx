@@ -33,8 +33,14 @@ const downloadTextFile = (filename: string, content: string, mimeType: string) =
   URL.revokeObjectURL(url)
 }
 
+const toArrayBuffer = (data: Uint8Array) => {
+  const copy = new Uint8Array(data.byteLength)
+  copy.set(data)
+  return copy.buffer
+}
+
 const downloadBinaryFile = (filename: string, data: Uint8Array, mimeType: string) => {
-  const blob = new Blob([data], { type: mimeType })
+  const blob = new Blob([toArrayBuffer(data)], { type: mimeType })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
