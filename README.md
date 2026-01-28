@@ -71,6 +71,10 @@ detector model) and load them via MediaPipe’s `FilesetResolver.forVisionTasks`
 `/mediapipe`. This avoids third-party CDNs, keeps everything cacheable by the PWA, and stays
 compatible with COOP/COEP when enabled.
 
+The `prebuild` step runs `pnpm run copy:mediapipe`, which copies the MediaPipe WASM files from
+`node_modules` into `public/mediapipe` so they keep stable filenames at runtime. Add your
+face detector `.task` model file to the same folder.
+
 ## What this app is / isn't
 
 **This app is:**
