@@ -23,6 +23,11 @@ Use the “Enter demo vault” button on the landing page to load a safe, fake d
 separate local database. Demo data never mixes with real vault data. Use “Exit demo” in the
 header to return to the real vault.
 
+## Releases
+
+This project follows Semantic Versioning (SemVer). See `docs/RELEASING.md` for the tag-based
+GitHub Release workflow and build bundle attachment.
+
 ## Deployment (portfolio site)
 
 Build the app as static files and host anywhere (Netlify, Vercel, GitHub Pages, or a simple
