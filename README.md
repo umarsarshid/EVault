@@ -24,6 +24,14 @@ pnpm test
 - Dexie (IndexedDB)
 - libsodium (client-side crypto)
 - fflate (ZIP exports)
+- vite-plugin-pwa (offline caching + installable app)
+
+## Why this exists
+
+Evidence Vault is designed for offline-first documentation when cloud uploads are unsafe or
+impossible. The MVP focuses on local control, explicit user actions, and verifiable exports.
+
+See `docs/WHY.md` for the full rationale and tool choices.
 
 ## What this app is / isn't
 
