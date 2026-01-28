@@ -23,6 +23,7 @@ pnpm test
 - Tailwind CSS
 - Dexie (IndexedDB)
 - libsodium (client-side crypto)
+- fflate (ZIP exports)
 
 ## What this app is / isn't
 
@@ -70,3 +71,16 @@ You are responsible for complying with local laws on recording, consent, and dat
 - Each custody event is canonicalized (stable JSON field ordering) before hashing.
 - Events are hash-chained per item (`hash = H(prevHash + canonicalPayload)`).
 - Each event hash is signed with the vault’s Ed25519 key; signatures are stored with events.
+- Exports include a `custody_log.jsonl` with per-event canonical payload + export-time hash chain.
+
+## Export bundle
+
+- ZIP format: `EvidenceVault_Export_YYYYMMDD/`
+  - `README.txt`
+  - `manifest.json` + `manifest.csv`
+  - `custody_log.jsonl`
+  - `media/` (originals and/or redacted files)
+  - `verify/verify.html` + `verify/verify.js` (offline verification)
+- `verify.html` runs locally in a browser and checks:
+  - File hashes match `manifest.json`
+  - Custody chain integrity using the export-time hash chain fields
