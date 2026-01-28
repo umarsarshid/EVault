@@ -17,6 +17,24 @@ Open `http://localhost:5173`.
 pnpm test
 ```
 
+## Deployment (portfolio site)
+
+Build the app as static files and host anywhere (Netlify, Vercel, GitHub Pages, or a simple
+static file server).
+
+```bash
+pnpm build
+```
+
+The output is in `dist/`. Upload the contents of that folder to your host.
+
+### Download / Install
+
+- **Install as App (recommended):** visit the site on mobile or desktop and use the browser’s
+  “Install App” prompt. This enables offline use after the first load.
+- **Download Export Verifier (optional):** provide a direct link to the exported
+  `verify.html` + `verify.js` files from a bundle for reviewers who want a standalone checker.
+
 ## Stack
 
 - Vite + React + TypeScript
