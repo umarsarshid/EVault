@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      injectRegister: 'auto',
       registerType: 'autoUpdate',
       includeAssets: ['vite.svg', 'icons/evvault-icon.svg', 'icons/evvault-icon-maskable.svg'],
       manifest: {

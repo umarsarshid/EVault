@@ -4,7 +4,6 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './app/App'
 import { VaultProvider } from './app/VaultContext'
 import { initSodium } from './crypto/sodium'
-import { registerSW } from 'virtual:pwa-register'
 import './style.css'
 
 const root = document.getElementById('root')
@@ -14,12 +13,6 @@ if (!root) {
 }
 
 void initSodium()
-registerSW({
-  immediate: true,
-  onOfflineReady() {
-    console.info('[pwa] app ready for offline use')
-  },
-})
 
 createRoot(root).render(
   <StrictMode>

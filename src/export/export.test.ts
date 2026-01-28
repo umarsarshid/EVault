@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { unzipSync, strFromU8 } from 'fflate'
-import { createHash } from 'node:crypto'
 import { db } from '../db'
 import { encryptBlob } from '../crypto/blob'
 import { getSodium } from '../crypto/sodium'
 import { buildExportZip } from './zip'
 
-const sha256Hex = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex')
+const sha256Hex = (bytes: Uint8Array, sodium: Awaited<ReturnType<typeof getSodium>>) =>
+  sodium.to_hex(sodium.crypto_hash_sha256(bytes))
 
 describe('export bundle', () => {
   beforeEach(async () => {
@@ -63,7 +63,6 @@ describe('export bundle', () => {
       ts: now,
       action: 'capture',
       details: { note: 'captured' },
-      prevHash: null,
       hash: 'hash-1',
       signature: 'sig-1',
     })
@@ -128,8 +127,8 @@ describe('export bundle', () => {
     const originalZipBytes = zip[`${baseDir}/media/item_${itemId}_original.jpg`]
     const redactedZipBytes = zip[`${baseDir}/media/item_${itemId}_redacted.jpg`]
 
-    expect(sha256Hex(originalZipBytes)).toBe(originalEntry.sha256)
-    expect(sha256Hex(redactedZipBytes)).toBe(redactedEntry.sha256)
+    expect(sha256Hex(originalZipBytes, sodium)).toBe(originalEntry.sha256)
+    expect(sha256Hex(redactedZipBytes, sodium)).toBe(redactedEntry.sha256)
 
     const custodyText = strFromU8(zip[`${baseDir}/custody_log.jsonl`])
     const custodyLines = custodyText.split(/\r?\n/).filter(Boolean)

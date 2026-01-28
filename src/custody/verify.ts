@@ -5,7 +5,7 @@ import { getSodium } from '../crypto/sodium'
 const hashCustodyPayload = async (prevHash: string | undefined, payload: string) => {
   const sodium = await getSodium()
   const input = `${prevHash ?? ''}${payload}`
-  const hashBytes = sodium.crypto_generichash(32, sodium.from_string(input))
+  const hashBytes = sodium.crypto_generichash(32, sodium.from_string(input), null)
   return sodium.to_base64(hashBytes, sodium.base64_variants.ORIGINAL)
 }
 

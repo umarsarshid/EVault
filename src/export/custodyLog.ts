@@ -1,6 +1,6 @@
 import { getSodium } from '../crypto/sodium'
 import { canonicalizeCustodyEventContent } from '../custody'
-import { db, type CustodyEvent } from '../db'
+import { db } from '../db'
 
 export type CustodyLogEntry = {
   id: string
