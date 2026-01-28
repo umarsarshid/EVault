@@ -4,6 +4,7 @@ import Capture from './Capture'
 import Export from './Export'
 import ItemDetail from './ItemDetail'
 import Landing from './Landing'
+import Support from './Support'
 import Testimony from './Testimony'
 import VaultList from './VaultList'
 import VaultNew from './VaultNew'
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="testimony" element={<Testimony />} />
         <Route path="item/:id" element={<ItemDetail />} />
         <Route path="export" element={<Export />} />
+        <Route path="support" element={<Support />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
