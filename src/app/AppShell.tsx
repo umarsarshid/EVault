@@ -62,12 +62,19 @@ export default function AppShell() {
 
     const handleBeforeInstall = (event: Event) => {
       event.preventDefault()
-      setInstallPrompt(event as BeforeInstallPromptEvent)
+      const promptEvent = event as BeforeInstallPromptEvent
+      setInstallPrompt(promptEvent)
+      if (typeof window !== 'undefined') {
+        window.__evvaultInstallPrompt = promptEvent
+      }
     }
 
     const handleInstalled = () => {
       setIsInstalled(true)
       setInstallPrompt(null)
+      if (typeof window !== 'undefined') {
+        window.__evvaultInstallPrompt = undefined
+      }
     }
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstall)
@@ -84,6 +91,9 @@ export default function AppShell() {
     await installPrompt.prompt()
     await installPrompt.userChoice
     setInstallPrompt(null)
+    if (typeof window !== 'undefined') {
+      window.__evvaultInstallPrompt = undefined
+    }
   }
 
   return (
