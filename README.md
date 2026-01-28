@@ -86,6 +86,12 @@ See `docs/WHY.md` for the full rationale and tool choices.
 
 You are responsible for complying with local laws on recording, consent, and data handling. Do not upload sensitive evidence to unsafe channels or share it without appropriate legal guidance.
 
+## Responsible Use
+
+Evidence Vault is a documentation tool, not a legal service. Use it ethically, respect consent and privacy, and follow all applicable laws.
+
+**Not legal advice:** This project and its documentation do not provide legal advice. If you need legal guidance, consult a qualified attorney in your jurisdiction.
+
 ## Crypto notes (MVP)
 
 - Passphrase is stretched with Argon2id (libsodium `crypto_pwhash`).
