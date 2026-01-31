@@ -9,6 +9,7 @@ import Testimony from './Testimony'
 import VaultList from './VaultList'
 import VaultNew from './VaultNew'
 import VaultUnlock from './VaultUnlock'
+import VaultItems from './VaultItems'
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="vault/new" element={<VaultNew />} />
         <Route path="vault/unlock" element={<VaultUnlock />} />
         <Route path="vault" element={<VaultList />} />
+        <Route path="vault/items" element={<VaultItems />} />
         <Route path="capture" element={<Capture />} />
         <Route path="testimony" element={<Testimony />} />
         <Route path="item/:id" element={<ItemDetail />} />
