@@ -5,12 +5,15 @@ import Card from '../components/Card'
 import { db, type CustodyEvent, type EvidenceItem } from '../db'
 import { decryptBlob, encryptBlob } from '../crypto/blob'
 import { detectFaces } from '../ai/faceDetector'
+import { detectFacesInWorker } from '../ai/faceDetectWorker'
 import RedactionCanvas, { type RedactionRect } from '../redact/RedactionCanvas'
 import { pixelateImage } from '../redact/pixelate'
 import { appendCustodyEvent } from '../custody'
 import { useVault } from './VaultContext'
 
 type PreviewMode = 'original' | 'redacted'
+
+const FACE_MODEL_VERSION = 'face_detector.task'
 
 type FaceSuggestion = {
   id: string
@@ -43,6 +46,7 @@ export default function ItemDetail() {
   const [redactionMessage, setRedactionMessage] = useState<string | null>(null)
   const [faceDetectMessage, setFaceDetectMessage] = useState<string | null>(null)
   const [isDetectingFaces, setIsDetectingFaces] = useState(false)
+  const [isAutoRedacting, setIsAutoRedacting] = useState(false)
   const [isSavingRedaction, setIsSavingRedaction] = useState(false)
   const [previewMode, setPreviewMode] = useState<PreviewMode>('original')
   const [copiedHash, setCopiedHash] = useState<string | null>(null)
@@ -89,6 +93,20 @@ export default function ItemDetail() {
   useEffect(() => {
     setShowRedactionOverlay(true)
   }, [item?.id])
+
+  useEffect(() => {
+    if (!item?.aiSuggestions || suggestions.length > 0) return
+    const storedBoxes = item.aiSuggestions.boxes ?? []
+    if (storedBoxes.length === 0) return
+    setSuggestions(
+      storedBoxes.map((rect, index) => ({
+        id: `stored-${item.aiSuggestions?.detectedAt ?? 0}-${index}`,
+        rect,
+        score: 0,
+        included: true,
+      }))
+    )
+  }, [item?.aiSuggestions?.detectedAt, item?.id, suggestions.length])
 
   useEffect(() => {
     let active = true
@@ -255,61 +273,28 @@ export default function ItemDetail() {
       setIsDetectingFaces(true)
       setFaceDetectMessage(null)
 
-      const blob = await decryptBlob(vaultKey, {
-        nonce: item.encryptedBlob.nonce,
-        cipher: item.encryptedBlob.cipher,
-        mime: item.blobMime,
-        size: item.blobSize,
-      })
+      const { rects: detectedRects, scores } = await detectFaceRects()
 
-      const bitmap = await createImageBitmap(blob)
-      const result = await detectFaces(bitmap, { basePath: '/mediapipe' })
-      const bitmapWidth = bitmap.width
-      const bitmapHeight = bitmap.height
-      bitmap.close?.()
-
-      const scoredDetections = result.detections
-        .map((detection, index) => {
-          const categoryScores = detection.categories.map((category) => category.score ?? 0)
-          const score = categoryScores.length ? Math.max(...categoryScores) : 0
-          const box = detection.boundingBox
-          if (!box) return null
-          const x = Math.max(0, Math.min(bitmapWidth, box.originX))
-          const y = Math.max(0, Math.min(bitmapHeight, box.originY))
-          const width = Math.max(0, Math.min(bitmapWidth - x, box.width))
-          const height = Math.max(0, Math.min(bitmapHeight - y, box.height))
-          return {
-            id: `face-${index}`,
-            rect: { x, y, width, height },
-            score,
-          }
-        })
-        .filter((entry): entry is { id: string; rect: RedactionRect; score: number } =>
-          Boolean(entry)
-        )
-
-      if (scoredDetections.length === 0) {
+      if (detectedRects.length === 0) {
         setSuggestions([])
         setFaceDetectMessage('No faces detected.')
         return
       }
 
-      const formatted = scoredDetections
-        .map((detection) => `${Math.round(detection.score * 100)}%`)
-        .join(', ')
+      const formatted = scores.map((score) => `${Math.round(score * 100)}%`).join(', ')
 
       setSuggestions(
-        scoredDetections.map((detection) => ({
-          id: detection.id,
-          rect: detection.rect,
-          score: detection.score,
+        detectedRects.map((rect, index) => ({
+          id: `face-${index}`,
+          rect,
+          score: scores[index] ?? 0,
           included: true,
         }))
       )
 
       setFaceDetectMessage(
-        `Found ${scoredDetections.length} face${
-          scoredDetections.length === 1 ? '' : 's'
+        `Found ${detectedRects.length} face${
+          detectedRects.length === 1 ? '' : 's'
         }. Confidences: ${formatted}. Add the boxes to make them editable.`,
       )
     } catch (err) {
@@ -317,6 +302,91 @@ export default function ItemDetail() {
       setFaceDetectMessage('Unable to run face detection. Check that the model is available.')
     } finally {
       setIsDetectingFaces(false)
+    }
+  }
+
+  const handleApplyAutoFaceBlur = async () => {
+    if (!item || item.type !== 'photo') return
+    if (!vaultKey) {
+      setRedactionMessage('Unlock the vault before applying auto blur.')
+      return
+    }
+    if (!previewUrl) {
+      setRedactionMessage('Preview not available yet.')
+      return
+    }
+    if (isSavingRedaction || isAutoRedacting) return
+
+    try {
+      setIsAutoRedacting(true)
+      setRedactionMessage(null)
+      setFaceDetectMessage(null)
+
+      const { rects: detectedRects } = await detectFaceRects()
+
+      if (detectedRects.length === 0) {
+        setFaceDetectMessage('No faces detected.')
+        return
+      }
+
+      const redactedBlob = await pixelateImage(previewUrl, detectedRects, {
+        mimeType: item.blobMime,
+      })
+      const encrypted = await encryptBlob(vaultKey, redactedBlob)
+      const now = Date.now()
+
+      await db.items.update(item.id, {
+        redactedBlob: {
+          nonce: encrypted.nonce,
+          cipher: encrypted.cipher,
+        },
+        redactedMime: encrypted.mime,
+        redactedSize: encrypted.size,
+        redaction: {
+          method: 'pixelate',
+          rects: detectedRects,
+          createdAt: now,
+        },
+      })
+
+      const updatedItem: EvidenceItem = {
+        ...item,
+        redactedBlob: {
+          nonce: encrypted.nonce,
+          cipher: encrypted.cipher,
+        },
+        redactedMime: encrypted.mime,
+        redactedSize: encrypted.size,
+        redaction: {
+          method: 'pixelate' as const,
+          rects: detectedRects,
+          createdAt: now,
+        },
+      }
+
+      setItem(updatedItem)
+      setRects(detectedRects)
+      setSuggestions([])
+      setPreviewMode('redacted')
+      setRedactionMessage('Auto blur applied to detected faces.')
+
+      const custodyEvent = await appendCustodyEvent({
+        itemId: item.id,
+        action: 'redact',
+        vaultKey,
+        details: {
+          method: 'pixelate',
+          rectCount: detectedRects.length,
+          auto: true,
+        },
+      })
+
+      setEvents((prev) => [...prev, custodyEvent])
+    } catch (err) {
+      console.error(err)
+      setRedactionMessage('Unable to auto blur faces.')
+    } finally {
+      setIsAutoRedacting(false)
     }
   }
 
@@ -329,6 +399,77 @@ export default function ItemDetail() {
     } catch (err) {
       console.error(err)
     }
+  }
+
+  const detectFaceRects = async () => {
+    if (!item || item.type !== 'photo') {
+      return { rects: [] as RedactionRect[], scores: [] as number[] }
+    }
+    if (!vaultKey) {
+      throw new Error('Vault locked')
+    }
+
+    const blob = await decryptBlob(vaultKey, {
+      nonce: item.encryptedBlob.nonce,
+      cipher: item.encryptedBlob.cipher,
+      mime: item.blobMime,
+      size: item.blobSize,
+    })
+
+    let rects: RedactionRect[] = []
+    let scores: number[] = []
+
+    const bitmapForWorker = await createImageBitmap(blob)
+    try {
+      const workerResult = await detectFacesInWorker(bitmapForWorker, { basePath: '/mediapipe' })
+      const bitmapWidth = bitmapForWorker.width
+      const bitmapHeight = bitmapForWorker.height
+      rects = workerResult.rects
+        .map((rect) => {
+          const x = Math.max(0, Math.min(bitmapWidth, rect.x))
+          const y = Math.max(0, Math.min(bitmapHeight, rect.y))
+          const width = Math.max(0, Math.min(bitmapWidth - x, rect.width))
+          const height = Math.max(0, Math.min(bitmapHeight - y, rect.height))
+          if (width <= 0 || height <= 0) return null
+          return { x, y, width, height }
+        })
+        .filter((rect): rect is RedactionRect => Boolean(rect))
+      scores = workerResult.scores
+    } catch (workerError) {
+      console.warn('Face detection worker failed, falling back to main thread.', workerError)
+      bitmapForWorker.close?.()
+      const bitmap = await createImageBitmap(blob)
+      const result = await detectFaces(bitmap, { basePath: '/mediapipe' })
+      const bitmapWidth = bitmap.width
+      const bitmapHeight = bitmap.height
+      bitmap.close?.()
+
+      result.detections.forEach((detection) => {
+        const categoryScores = detection.categories.map((category) => category.score ?? 0)
+        const score = categoryScores.length ? Math.max(...categoryScores) : 0
+        const box = detection.boundingBox
+        if (!box) return
+        const x = Math.max(0, Math.min(bitmapWidth, box.originX))
+        const y = Math.max(0, Math.min(bitmapHeight, box.originY))
+        const width = Math.max(0, Math.min(bitmapWidth - x, box.width))
+        const height = Math.max(0, Math.min(bitmapHeight - y, box.height))
+        if (width <= 0 || height <= 0) return
+        rects.push({ x, y, width, height })
+        scores.push(score)
+      })
+    }
+
+    if (rects.length > 0) {
+      const aiSuggestions = {
+        modelVersion: FACE_MODEL_VERSION,
+        detectedAt: Date.now(),
+        boxes: rects,
+      }
+      await db.items.update(item.id, { aiSuggestions })
+      setItem((prev) => (prev ? { ...prev, aiSuggestions } : prev))
+    }
+
+    return { rects, scores }
   }
 
   const handleApplySuggestions = () => {
@@ -454,18 +595,25 @@ export default function ItemDetail() {
 
                 {item.type === 'photo' && !showingRedacted && (
                   <div className="flex flex-wrap items-center gap-3">
-                    <Button onClick={saveRedacted} disabled={isSavingRedaction}>
+                    <Button onClick={saveRedacted} disabled={isSavingRedaction || isAutoRedacting}>
                       {isSavingRedaction ? 'Saving…' : 'Save redacted copy'}
                     </Button>
                     <Button
                       variant="outline"
+                      onClick={handleApplyAutoFaceBlur}
+                      disabled={isAutoRedacting || isSavingRedaction}
+                    >
+                      {isAutoRedacting ? 'Applying…' : 'Apply blur to faces'}
+                    </Button>
+                    <Button
+                      variant="outline"
                       onClick={handleAutoDetectFaces}
-                      disabled={isDetectingFaces}
+                      disabled={isDetectingFaces || isAutoRedacting}
                     >
                       {isDetectingFaces ? 'Detecting…' : 'Auto-detect faces'}
                     </Button>
                     <span className="text-xs text-sand-600 dark:text-sand-400">
-                      Pixelate the selected regions.
+                      Pixelate manual regions or auto-blur detected faces.
                     </span>
                   </div>
                 )}

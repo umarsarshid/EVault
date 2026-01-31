@@ -50,6 +50,12 @@ export type ItemRedaction = {
   createdAt: number
 }
 
+export type ItemAiSuggestions = {
+  modelVersion: string
+  detectedAt: number
+  boxes: ItemRedactionRect[]
+}
+
 export type EncryptedPayload = {
   nonce: string
   cipher: string
@@ -69,6 +75,7 @@ export type EvidenceItem = {
   metadata: ItemMetadata
   location?: ItemLocation
   redaction?: ItemRedaction
+  aiSuggestions?: ItemAiSuggestions
   updatedAt?: number
 }
 
