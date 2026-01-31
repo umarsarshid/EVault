@@ -78,6 +78,14 @@ export default function ItemDetail() {
   }, [id])
 
   useEffect(() => {
+    if (!item || item.type !== 'photo') {
+      setRects([])
+      return
+    }
+    setRects(item.redaction?.rects ?? [])
+  }, [item?.id])
+
+  useEffect(() => {
     let active = true
 
     const buildPreview = async () => {
@@ -164,13 +172,8 @@ export default function ItemDetail() {
       setRedactionMessage('Preview not available yet.')
       return
     }
-    const selectedSuggestionRects = suggestions
-      .filter((suggestion) => suggestion.included)
-      .map((suggestion) => suggestion.rect)
-    const selectedRects = [...rects, ...selectedSuggestionRects]
-
-    if (selectedRects.length === 0) {
-      setRedactionMessage('Select at least one rectangle to pixelate.')
+    if (rects.length === 0) {
+      setRedactionMessage('Add at least one rectangle to pixelate.')
       return
     }
 
@@ -178,7 +181,7 @@ export default function ItemDetail() {
       setIsSavingRedaction(true)
       setRedactionMessage(null)
 
-      const redactedBlob = await pixelateImage(previewUrl, selectedRects, {
+      const redactedBlob = await pixelateImage(previewUrl, rects, {
         mimeType: item.blobMime,
       })
       const encrypted = await encryptBlob(vaultKey, redactedBlob)
@@ -193,7 +196,7 @@ export default function ItemDetail() {
         redactedSize: encrypted.size,
         redaction: {
           method: 'pixelate',
-          rects: selectedRects,
+          rects,
           createdAt: now,
         },
       })
@@ -208,7 +211,7 @@ export default function ItemDetail() {
         redactedSize: encrypted.size,
         redaction: {
           method: 'pixelate' as const,
-          rects: selectedRects,
+          rects,
           createdAt: now,
         },
       }
@@ -223,7 +226,7 @@ export default function ItemDetail() {
         vaultKey,
         details: {
           method: 'pixelate',
-          rectCount: selectedRects.length,
+          rectCount: rects.length,
         },
       })
 
@@ -302,7 +305,7 @@ export default function ItemDetail() {
       setFaceDetectMessage(
         `Found ${scoredDetections.length} face${
           scoredDetections.length === 1 ? '' : 's'
-        }. Confidences: ${formatted}. Review the suggested boxes below.`,
+        }. Confidences: ${formatted}. Add the boxes to make them editable.`,
       )
     } catch (err) {
       console.error(err)
@@ -323,10 +326,21 @@ export default function ItemDetail() {
     }
   }
 
+  const handleApplySuggestions = () => {
+    const accepted = suggestions.filter((suggestion) => suggestion.included)
+    if (accepted.length === 0) {
+      setFaceDetectMessage('Select at least one suggested face to add.')
+      return
+    }
+    setRects((prev) => [...prev, ...accepted.map((suggestion) => suggestion.rect)])
+    setSuggestions((prev) => prev.filter((suggestion) => !suggestion.included))
+    setFaceDetectMessage(
+      `Added ${accepted.length} face${accepted.length === 1 ? '' : 's'} as editable rectangles.`,
+    )
+  }
+
   const canShowRedacted = Boolean(redactedUrl)
   const showingRedacted = previewMode === 'redacted'
-  const selectedSuggestionCount = suggestions.filter((suggestion) => suggestion.included).length
-  const selectedRectCount = rects.length + selectedSuggestionCount
 
   return (
     <div className="space-y-8">
@@ -388,6 +402,7 @@ export default function ItemDetail() {
                   <RedactionCanvas
                     imageUrl={previewUrl}
                     initialRects={item.redaction?.rects}
+                    rects={rects}
                     suggestions={suggestions.map((suggestion) => ({
                       rect: suggestion.rect,
                       included: suggestion.included,
@@ -459,6 +474,14 @@ export default function ItemDetail() {
                         </label>
                       ))}
                     </div>
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <Button variant="outline" onClick={handleApplySuggestions}>
+                        Add selected to redactions
+                      </Button>
+                      <span className="text-[0.6rem] text-emerald-800/80 dark:text-emerald-100/80">
+                        Converts suggestions into editable rectangles.
+                      </span>
+                    </div>
                   </div>
                 )}
                 {item.type === 'photo' && showingRedacted && (
@@ -512,7 +535,7 @@ export default function ItemDetail() {
                 {item.type === 'photo' && (
                   <div>
                     <span className="font-semibold text-sand-900 dark:text-sand-50">Redactions:</span>{' '}
-                    {selectedRectCount} region{selectedRectCount === 1 ? '' : 's'}
+                    {rects.length} region{rects.length === 1 ? '' : 's'}
                   </div>
                 )}
                 {item.redactedBlob && (
