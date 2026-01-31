@@ -44,6 +44,7 @@ export default defineConfig({
         swSrc: 'src/sw.ts',
         swDest: 'dist/sw.js',
         injectionPoint: 'self.__WB_MANIFEST',
+        maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
       },
       injectManifestBuildOptions: {
         minify: false,
