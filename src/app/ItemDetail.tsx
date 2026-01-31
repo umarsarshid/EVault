@@ -4,8 +4,8 @@ import Button from '../components/Button'
 import Card from '../components/Card'
 import { db, type CustodyEvent, type EvidenceItem } from '../db'
 import { decryptBlob, encryptBlob } from '../crypto/blob'
-import { detectFaces } from '../ai/faceDetector'
 import { detectFacesInWorker } from '../ai/faceDetectWorker'
+import { detectFaces } from '../ai/faceDetector'
 import RedactionCanvas, { type RedactionRect } from '../redact/RedactionCanvas'
 import { pixelateImage } from '../redact/pixelate'
 import { appendCustodyEvent } from '../custody'
@@ -438,6 +438,28 @@ export default function ItemDetail() {
     } catch (workerError) {
       console.warn('Face detection worker failed, falling back to main thread.', workerError)
       bitmapForWorker.close?.()
+      const bitmap = await createImageBitmap(blob)
+      const result = await detectFaces(bitmap, { basePath: '/mediapipe' })
+      const bitmapWidth = bitmap.width
+      const bitmapHeight = bitmap.height
+      bitmap.close?.()
+
+      result.detections.forEach((detection) => {
+        const categoryScores = detection.categories.map((category) => category.score ?? 0)
+        const score = categoryScores.length ? Math.max(...categoryScores) : 0
+        const box = detection.boundingBox
+        if (!box) return
+        const x = Math.max(0, Math.min(bitmapWidth, box.originX))
+        const y = Math.max(0, Math.min(bitmapHeight, box.originY))
+        const width = Math.max(0, Math.min(bitmapWidth - x, box.width))
+        const height = Math.max(0, Math.min(bitmapHeight - y, box.height))
+        if (width <= 0 || height <= 0) return
+        rects.push({ x, y, width, height })
+        scores.push(score)
+      })
+    }
+
+    if (rects.length === 0) {
       const bitmap = await createImageBitmap(blob)
       const result = await detectFaces(bitmap, { basePath: '/mediapipe' })
       const bitmapWidth = bitmap.width
