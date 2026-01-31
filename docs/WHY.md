@@ -20,6 +20,7 @@ automation or cloud features.
 - Explicit over implicit: users choose what gets captured and exported.
 - Verifiable exports: hashes + custody logs are readable and checkable in any browser.
 - Minimized risk: no cloud sync, no auto-redaction, no stealth mode in MVP.
+- Manual redaction UI keeps controls simple: cleared rectangles and a reset preview keep you from having to reload when iterating on edits.
 
 ## Why these tools
 

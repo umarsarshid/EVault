@@ -129,6 +129,7 @@ Evidence Vault is a documentation tool, not a legal service. Use it ethically, r
 
 - The capture flow supports photo, video, audio, and text-only testimony.
 - Media is encrypted client-side before being saved to IndexedDB.
+- Manual redaction works in-place: you can clear all rectangles or reset the preview to the original image before exporting.
 
 ## Custody log notes
 

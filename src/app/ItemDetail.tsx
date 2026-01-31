@@ -505,6 +505,31 @@ export default function ItemDetail() {
     )
   }
 
+  const hydrateStoredSuggestions = () => {
+    const storedBoxes = item?.aiSuggestions?.boxes ?? []
+    if (storedBoxes.length === 0) return []
+    return storedBoxes.map((rect, index) => ({
+      id: `stored-${item?.aiSuggestions?.detectedAt ?? 0}-${index}`,
+      rect,
+      score: 0,
+      included: true,
+    }))
+  }
+
+  const handleClearRects = () => {
+    setRects([])
+    setSuggestions([])
+    setFaceDetectMessage('Removed all manual boxes. Start fresh anytime.')
+  }
+
+  const handleResetImage = () => {
+    setPreviewMode('original')
+    setShowRedactionOverlay(true)
+    setRects(item?.redaction?.rects ?? [])
+    setSuggestions(hydrateStoredSuggestions())
+    setFaceDetectMessage('Image reset to original view.')
+  }
+
   const canShowRedacted = Boolean(redactedUrl)
   const showingRedacted = previewMode === 'redacted'
 
@@ -635,6 +660,12 @@ export default function ItemDetail() {
                     <span className="text-xs text-sand-600 dark:text-sand-400">
                       Pixelate manual regions or auto-blur detected faces.
                     </span>
+                    <Button variant="ghost" onClick={handleClearRects}>
+                      Clear boxes
+                    </Button>
+                    <Button variant="ghost" onClick={handleResetImage}>
+                      Reset image
+                    </Button>
                   </div>
                 )}
                 {item.type === 'photo' &&

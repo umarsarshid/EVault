@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import { db } from '../db'
@@ -51,6 +52,7 @@ const createItemId = () => {
 
 export default function Capture() {
   const { vaultStatus, vaultKey } = useVault()
+  const navigate = useNavigate()
   const [stepIndex, setStepIndex] = useState(0)
   const [what, setWhat] = useState('')
   const [when, setWhen] = useState(() => getLocalDateTimeInputValue(new Date()))
@@ -83,6 +85,7 @@ export default function Capture() {
   const [isRecordingAudio, setIsRecordingAudio] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  const [lastSavedItemId, setLastSavedItemId] = useState<string | null>(null)
 
   const steps = useMemo(() => ['Capture media', 'Prompts', 'Review & Save'], [])
   const hasMedia = Boolean(photoBlob || videoBlob || audioBlob)
@@ -442,6 +445,7 @@ export default function Capture() {
       })
 
       setSaveMessage('Saved encrypted item to the vault.')
+      setLastSavedItemId(itemId)
     } catch (err) {
       console.error(err)
       setSaveMessage('Failed to save item. Try again.')
@@ -786,6 +790,14 @@ export default function Capture() {
                 <Button onClick={handleSave} disabled={saveDisabled}>
                   Save encrypted
                 </Button>
+                {lastSavedItemId && (
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate(`/item/${lastSavedItemId}`)}
+                  >
+                    View in vault
+                  </Button>
+                )}
                 <Button variant="outline" onClick={goBack}>
                   Back to prompts
                 </Button>
