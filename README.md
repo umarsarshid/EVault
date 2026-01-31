@@ -75,6 +75,11 @@ The `predev` and `prebuild` steps run `pnpm run copy:mediapipe`, which copies th
 WASM files from `node_modules` into `public/mediapipe` so they keep stable filenames at
 runtime. Add your face detector `.task` model file to the same folder.
 
+The PWA service worker precaches those files (and the `.task` model), so once the app has
+loaded them online, the face detector keeps working offline. To verify, load the app while
+connected, run auto-detect once, then switch to airplane mode/offline and rerun detection;
+the cached MediaPipe assets should still load.
+
 Detection results are persisted per item under `aiSuggestions` (model version, detection
 timestamp, geometry) so the UI can rehydrate previous suggestions and avoid rerunning unless the
 user explicitly refreshes. Only bounding boxes are stored—never decrypted pixels.
@@ -89,6 +94,7 @@ If the worker fails or finds zero faces, the app falls back to main-thread detec
 - A local-only, offline-first evidence vault you can install as a PWA.
 - A tool for capturing media or written testimony with metadata.
 - A way to export an encrypted, tamper-evident bundle for legal review.
+- A place to review captured items and delete them if you decide to discard that evidence.
 
 **This app is not:**
 - A cloud backup or sharing service.

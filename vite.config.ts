@@ -8,7 +8,17 @@ export default defineConfig({
     VitePWA({
       injectRegister: 'auto',
       registerType: 'autoUpdate',
-      includeAssets: ['vite.svg', 'icons/evvault-icon.svg', 'icons/evvault-icon-maskable.svg'],
+      includeAssets: [
+        'vite.svg',
+        'icons/evvault-icon.svg',
+        'icons/evvault-icon-maskable.svg',
+        'mediapipe/vision_bundle.cjs',
+        'mediapipe/vision_wasm_internal.js',
+        'mediapipe/vision_wasm_internal.wasm',
+        'mediapipe/vision_wasm_nosimd_internal.js',
+        'mediapipe/vision_wasm_nosimd_internal.wasm',
+        'mediapipe/face_detector.task',
+      ],
       manifest: {
         name: 'Evidence Vault',
         short_name: 'EvidenceVault',
@@ -34,7 +44,7 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: '/index.html',
-        globPatterns: ['**/*.{js,css,html,svg,ico,png}'],
+        globPatterns: ['**/*.{js,css,html,svg,ico,png,wasm,cjs,task}'],
         runtimeCaching: [
           {
             urlPattern: ({ request }) => request.destination === 'image',

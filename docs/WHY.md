@@ -13,6 +13,7 @@ automation or cloud features.
 - A free, installable download (PWA) that works offline after first load.
 - A local vault where evidence is encrypted at rest and never leaves the device unless exported.
 - A human-readable export bundle that can be verified without any server.
+- A review workflow that lets you delete captures you no longer need before exporting.
 
 ## Design principles
 
@@ -57,6 +58,8 @@ automation or cloud features.
 - Detection metadata (model version, timestamp, bounding boxes) is saved per item so the UI
 can reconstruct previous suggestions without rerunning the heavy detector. Only geometry is
 stored—never decrypted pixels.
+- The PWA service worker precaches the MediaPipe WASM/model files so once you open the app
+  online, face detection keeps working even if you go offline later.
 
 ## Why the export format looks the way it does
 
