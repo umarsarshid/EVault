@@ -79,7 +79,7 @@ export type EvidenceItem = {
   updatedAt?: number
 }
 
-export type CustodyEventAction = 'capture' | 'redact' | 'export' | 'verify'
+export type CustodyEventAction = 'capture' | 'redact' | 'export' | 'verify' | 'delete'
 
 export type CustodyEvent = {
   id: string

@@ -69,7 +69,7 @@ export default function Landing() {
               </Button>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button onClick={() => navigate('/vault/new')}>Create vault</Button>
+              <Button onClick={() => navigate('/vault')}>Vaults</Button>
               <Button variant="outline" onClick={handleEnterDemo} disabled={isSwitchingMode}>
                 Enter demo vault
               </Button>
@@ -207,8 +207,8 @@ export default function Landing() {
             </ol>
             <div className="flex flex-wrap gap-3">
               <Button onClick={() => scrollToSection('tour')}>View feature tour</Button>
-              <Button variant="outline" onClick={() => navigate('/vault/new')}>
-                Create vault
+              <Button variant="outline" onClick={() => navigate('/vault')}>
+                Manage vaults
               </Button>
             </div>
           </div>

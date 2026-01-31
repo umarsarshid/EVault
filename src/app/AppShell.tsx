@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import Button from '../components/Button'
 import Input from '../components/Input'
 import { unlockVault } from '../crypto/vault'
+import { getVaultMetaForMode } from '../db'
 import { useVault } from './VaultContext'
 
 type ThemeMode = 'light' | 'dark'
@@ -14,7 +15,6 @@ type BeforeInstallPromptEvent = Event & {
 
 const navItems = [
   { label: 'Home', to: '/' },
-  { label: 'New vault', to: '/vault/new' },
   { label: 'Vault', to: '/vault' },
   { label: 'Capture', to: '/capture' },
   { label: 'Testimony', to: '/testimony' },
@@ -45,6 +45,7 @@ export default function AppShell() {
     isDemoMode,
     exitDemoMode,
     isSwitchingMode,
+    mode,
   } = useVault()
   const isLocked = vaultStatus === 'locked'
   const idleMinutes = Math.round(idleTimeoutMs / 60000)
@@ -56,6 +57,8 @@ export default function AppShell() {
   const [passphrase, setPassphrase] = useState('')
   const [unlockError, setUnlockError] = useState<string | null>(null)
   const [isUnlocking, setIsUnlocking] = useState(false)
+  const [activeVaultName, setActiveVaultName] = useState('Primary vault')
+  const navigate = useNavigate()
 
   useEffect(() => {
     const root = document.documentElement
@@ -101,6 +104,24 @@ export default function AppShell() {
     }
   }, [])
 
+  useEffect(() => {
+    let active = true
+
+    const loadVaultMeta = async () => {
+      const meta = await getVaultMetaForMode(mode)
+      if (!active) return
+      setActiveVaultName(
+        meta?.vaultName ?? (mode === 'demo' ? 'Demo vault' : 'Primary vault'),
+      )
+    }
+
+    void loadVaultMeta()
+
+    return () => {
+      active = false
+    }
+  }, [mode, isSwitchingMode])
+
   const handleInstallClick = async () => {
     if (!installPrompt) return
     await installPrompt.prompt()
@@ -134,16 +155,16 @@ export default function AppShell() {
   }
 
   return (
-    <div className="min-h-screen text-sand-900 dark:text-sand-50">
+    <div className="min-h-screen bg-sand-50 text-sand-900 dark:bg-sand-900 dark:text-sand-50">
       <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute -top-20 right-[-6rem] h-72 w-72 rounded-full bg-amber-200/35 blur-3xl dark:bg-amber-500/15 ev-float" />
-        <div className="absolute bottom-[-10rem] left-[-5rem] h-72 w-72 rounded-full bg-sand-300/30 blur-3xl dark:bg-sand-700/20 ev-float" />
+        <div className="absolute -top-20 right-[-6rem] h-72 w-72 rounded-full bg-blue-400/25 blur-3xl dark:bg-blue-600/20 ev-float" />
+        <div className="absolute bottom-[-10rem] left-[-5rem] h-72 w-72 rounded-full bg-sand-200/30 blur-3xl dark:bg-sand-800/30 ev-float" />
       </div>
 
-      <div className="border-b border-sand-300/70 bg-white/70 backdrop-blur dark:border-sand-800/70 dark:bg-sand-900/40">
+      <div className="border-b border-blue-200/70 bg-white/70 backdrop-blur dark:border-blue-800/70 dark:bg-sand-900/40">
         <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 text-xs sm:px-6">
           <div className="flex items-center gap-3">
-            <span className="ev-label text-[0.55rem] text-sand-500 dark:text-sand-400">
+            <span className="ev-label text-[0.55rem] text-blue-500 dark:text-blue-200">
               Evidence Vault
             </span>
             <span className="hidden h-1.5 w-1.5 rounded-full bg-amber-400 sm:inline-block" />
@@ -161,6 +182,9 @@ export default function AppShell() {
               ].join(' ')}
             >
               {vaultStatus.toUpperCase()}
+            </span>
+            <span className="hidden text-sand-500 dark:text-sand-400 sm:inline">
+              Active vault: {activeVaultName}
             </span>
             <span className="hidden text-sand-500 dark:text-sand-400 sm:inline">
               Auto-lock after {idleMinutes} min idle
@@ -195,6 +219,13 @@ export default function AppShell() {
                 Unlock
               </button>
             )}
+            <button
+              type="button"
+              className="rounded-full border border-dashed border-sand-400/70 bg-white/60 px-3 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.22em] text-sand-700 transition hover:-translate-y-0.5 hover:border-sand-500 dark:border-sand-700 dark:bg-sand-900/60 dark:text-sand-200 dark:hover:border-sand-500"
+              onClick={() => navigate(`/vault?showItems=true&vault=${mode}`)}
+            >
+              View items
+            </button>
             <button
               type="button"
               className="rounded-full border border-dashed border-sand-400/70 bg-white/60 px-3 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.22em] text-sand-700 transition hover:-translate-y-0.5 hover:border-sand-500 dark:border-sand-700 dark:bg-sand-900/60 dark:text-sand-200 dark:hover:border-sand-500"

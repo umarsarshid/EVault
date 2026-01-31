@@ -80,3 +80,8 @@ export const setActiveDb = (mode: VaultDbMode) => {
 }
 
 export const getActiveDbMode = (): VaultDbMode => (db === demoDb ? 'demo' : 'real')
+
+export const getDbForMode = (mode: VaultDbMode) => (mode === 'demo' ? demoDb : primaryDb)
+
+export const getVaultMetaForMode = async (mode: VaultDbMode) =>
+  getDbForMode(mode).vault_meta.get('primary')

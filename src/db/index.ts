@@ -1,4 +1,12 @@
-export { db, EvidenceVaultDB, getActiveDbMode, setActiveDb, type VaultDbMode } from './db'
+export {
+  db,
+  EvidenceVaultDB,
+  getActiveDbMode,
+  getDbForMode,
+  getVaultMetaForMode,
+  setActiveDb,
+  type VaultDbMode,
+} from './db'
 export type {
   CustodyEvent,
   CustodyEventAction,
