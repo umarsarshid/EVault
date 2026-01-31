@@ -47,6 +47,7 @@ export default function ItemDetail() {
   const [previewMode, setPreviewMode] = useState<PreviewMode>('original')
   const [copiedHash, setCopiedHash] = useState<string | null>(null)
   const [suggestions, setSuggestions] = useState<FaceSuggestion[]>([])
+  const [showRedactionOverlay, setShowRedactionOverlay] = useState(true)
 
   useEffect(() => {
     let mounted = true
@@ -83,6 +84,10 @@ export default function ItemDetail() {
       return
     }
     setRects(item.redaction?.rects ?? [])
+  }, [item?.id])
+
+  useEffect(() => {
+    setShowRedactionOverlay(true)
   }, [item?.id])
 
   useEffect(() => {
@@ -396,9 +401,23 @@ export default function ItemDetail() {
                   >
                     Redacted
                   </button>
+                  {item.type === 'photo' && !showingRedacted && (
+                    <button
+                      type="button"
+                      onClick={() => setShowRedactionOverlay((prev) => !prev)}
+                      className={[
+                        'rounded-full border px-3 py-1 font-medium transition',
+                        showRedactionOverlay
+                          ? 'border-amber-300 bg-amber-100/70 text-amber-900 dark:border-amber-500/50 dark:bg-amber-900/30 dark:text-amber-100'
+                          : 'border-sand-200 bg-white/60 text-sand-600 dark:border-sand-700 dark:bg-sand-900/60 dark:text-sand-300',
+                      ].join(' ')}
+                    >
+                      {showRedactionOverlay ? 'Hide boxes' : 'Show boxes'}
+                    </button>
+                  )}
                 </div>
 
-                {item.type === 'photo' && !showingRedacted && (
+                {item.type === 'photo' && !showingRedacted && showRedactionOverlay && (
                   <RedactionCanvas
                     imageUrl={previewUrl}
                     initialRects={item.redaction?.rects}
@@ -408,6 +427,13 @@ export default function ItemDetail() {
                       included: suggestion.included,
                     }))}
                     onChange={setRects}
+                  />
+                )}
+                {item.type === 'photo' && !showingRedacted && !showRedactionOverlay && (
+                  <img
+                    src={previewUrl}
+                    alt={item.metadata.what || 'Evidence preview'}
+                    className="w-full rounded-2xl border border-sand-200 object-cover dark:border-sand-700"
                   />
                 )}
                 {item.type === 'photo' && showingRedacted && redactedUrl && (
@@ -443,7 +469,10 @@ export default function ItemDetail() {
                     </span>
                   </div>
                 )}
-                {item.type === 'photo' && !showingRedacted && suggestions.length > 0 && (
+                {item.type === 'photo' &&
+                  !showingRedacted &&
+                  showRedactionOverlay &&
+                  suggestions.length > 0 && (
                   <div className="space-y-2 rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/60 p-3 text-xs text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-900/20 dark:text-emerald-100">
                     <p className="font-semibold uppercase tracking-[0.2em] text-[0.55rem]">
                       Suggested faces

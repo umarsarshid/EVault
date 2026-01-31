@@ -14,6 +14,7 @@ const wasmFiles = [
   'vision_wasm_nosimd_internal.js',
   'vision_wasm_nosimd_internal.wasm',
 ]
+const bundleFiles = ['vision_bundle.cjs']
 
 if (!existsSync(srcDir)) {
   console.warn('[mediapipe] wasm source not found:', srcDir)
@@ -24,11 +25,14 @@ if (!existsSync(srcDir)) {
 await mkdir(destDir, { recursive: true })
 
 await Promise.all(
-  wasmFiles.map(async (file) => {
-    const from = resolve(srcDir, file)
+  [...wasmFiles, ...bundleFiles].map(async (file) => {
+    const from =
+      file === 'vision_bundle.cjs'
+        ? resolve(root, 'node_modules/@mediapipe/tasks-vision', file)
+        : resolve(srcDir, file)
     const to = resolve(destDir, file)
     await copyFile(from, to)
   })
 )
 
-console.log('[mediapipe] wasm files copied to public/mediapipe')
+console.log('[mediapipe] MediaPipe assets copied to public/mediapipe')
