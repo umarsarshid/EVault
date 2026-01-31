@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import Button from '../components/Button'
 import Card from '../components/Card'
+import FaceSuggestionPanel from '../components/FaceSuggestionPanel'
 import { db, type CustodyEvent, type EvidenceItem } from '../db'
 import { decryptBlob, encryptBlob } from '../crypto/blob'
 import { detectFacesInWorker } from '../ai/faceDetectWorker'
@@ -10,17 +11,17 @@ import RedactionCanvas, { type RedactionRect } from '../redact/RedactionCanvas'
 import { pixelateImage } from '../redact/pixelate'
 import { appendCustodyEvent } from '../custody'
 import { useVault } from './VaultContext'
+import {
+  applyFaceSuggestions,
+  clampRedactionRects,
+  convertDetectionsToRects,
+  FaceSuggestion,
+  hydrateFaceSuggestions,
+} from './faceSuggestions'
 
 type PreviewMode = 'original' | 'redacted'
 
 const FACE_MODEL_VERSION = 'face_detector.task'
-
-type FaceSuggestion = {
-  id: string
-  rect: RedactionRect
-  score: number
-  included: boolean
-}
 
 const formatEventTime = (timestamp: number) =>
   new Date(timestamp).toLocaleString(undefined, {
@@ -52,6 +53,9 @@ export default function ItemDetail() {
   const [copiedHash, setCopiedHash] = useState<string | null>(null)
   const [suggestions, setSuggestions] = useState<FaceSuggestion[]>([])
   const [showRedactionOverlay, setShowRedactionOverlay] = useState(true)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteMessage, setDeleteMessage] = useState<string | null>(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     let mounted = true
@@ -96,16 +100,12 @@ export default function ItemDetail() {
 
   useEffect(() => {
     if (!item?.aiSuggestions || suggestions.length > 0) return
-    const storedBoxes = item.aiSuggestions.boxes ?? []
-    if (storedBoxes.length === 0) return
-    setSuggestions(
-      storedBoxes.map((rect, index) => ({
-        id: `stored-${item.aiSuggestions?.detectedAt ?? 0}-${index}`,
-        rect,
-        score: 0,
-        included: true,
-      }))
+    const stored = hydrateFaceSuggestions(
+      item.aiSuggestions.boxes ?? [],
+      item.aiSuggestions.detectedAt,
     )
+    if (stored.length === 0) return
+    setSuggestions(stored)
   }, [item?.aiSuggestions?.detectedAt, item?.id, suggestions.length])
 
   useEffect(() => {
@@ -401,6 +401,36 @@ export default function ItemDetail() {
     }
   }
 
+  const handleDeleteItem = async () => {
+    if (!item) return
+    if (!vaultKey) {
+      setDeleteMessage('Unlock the vault before deleting.')
+      return
+    }
+    if (!window.confirm('Delete this item permanently? This cannot be undone.')) {
+      return
+    }
+
+    try {
+      setIsDeleting(true)
+      setDeleteMessage(null)
+      await appendCustodyEvent({
+        itemId: item.id,
+        action: 'delete',
+        vaultKey,
+        details: { reason: 'user_removed' },
+      })
+      await db.items.delete(item.id)
+      setDeleteMessage('Item removed from the vault.')
+      navigate('/vault', { replace: true })
+    } catch (err) {
+      console.error(err)
+      setDeleteMessage('Unable to delete the item.')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   const detectFaceRects = async () => {
     if (!item || item.type !== 'photo') {
       return { rects: [] as RedactionRect[], scores: [] as number[] }
@@ -422,63 +452,39 @@ export default function ItemDetail() {
     const bitmapForWorker = await createImageBitmap(blob)
     try {
       const workerResult = await detectFacesInWorker(bitmapForWorker, { basePath: '/mediapipe' })
-      const bitmapWidth = bitmapForWorker.width
-      const bitmapHeight = bitmapForWorker.height
-      rects = workerResult.rects
-        .map((rect) => {
-          const x = Math.max(0, Math.min(bitmapWidth, rect.x))
-          const y = Math.max(0, Math.min(bitmapHeight, rect.y))
-          const width = Math.max(0, Math.min(bitmapWidth - x, rect.width))
-          const height = Math.max(0, Math.min(bitmapHeight - y, rect.height))
-          if (width <= 0 || height <= 0) return null
-          return { x, y, width, height }
-        })
-        .filter((rect): rect is RedactionRect => Boolean(rect))
+      rects = clampRedactionRects(
+        workerResult.rects,
+        bitmapForWorker.width,
+        bitmapForWorker.height,
+      )
       scores = workerResult.scores
     } catch (workerError) {
       console.warn('Face detection worker failed, falling back to main thread.', workerError)
-      bitmapForWorker.close?.()
       const bitmap = await createImageBitmap(blob)
       const result = await detectFaces(bitmap, { basePath: '/mediapipe' })
-      const bitmapWidth = bitmap.width
-      const bitmapHeight = bitmap.height
+      const { rects: fallbackRects, scores: fallbackScores } = convertDetectionsToRects(
+        result.detections,
+        bitmap.width,
+        bitmap.height,
+      )
+      rects = [...rects, ...fallbackRects]
+      scores = [...scores, ...fallbackScores]
       bitmap.close?.()
-
-      result.detections.forEach((detection) => {
-        const categoryScores = detection.categories.map((category) => category.score ?? 0)
-        const score = categoryScores.length ? Math.max(...categoryScores) : 0
-        const box = detection.boundingBox
-        if (!box) return
-        const x = Math.max(0, Math.min(bitmapWidth, box.originX))
-        const y = Math.max(0, Math.min(bitmapHeight, box.originY))
-        const width = Math.max(0, Math.min(bitmapWidth - x, box.width))
-        const height = Math.max(0, Math.min(bitmapHeight - y, box.height))
-        if (width <= 0 || height <= 0) return
-        rects.push({ x, y, width, height })
-        scores.push(score)
-      })
+    } finally {
+      bitmapForWorker.close?.()
     }
 
     if (rects.length === 0) {
       const bitmap = await createImageBitmap(blob)
       const result = await detectFaces(bitmap, { basePath: '/mediapipe' })
-      const bitmapWidth = bitmap.width
-      const bitmapHeight = bitmap.height
+      const { rects: fallbackRects, scores: fallbackScores } = convertDetectionsToRects(
+        result.detections,
+        bitmap.width,
+        bitmap.height,
+      )
+      rects = [...fallbackRects]
+      scores = [...fallbackScores]
       bitmap.close?.()
-
-      result.detections.forEach((detection) => {
-        const categoryScores = detection.categories.map((category) => category.score ?? 0)
-        const score = categoryScores.length ? Math.max(...categoryScores) : 0
-        const box = detection.boundingBox
-        if (!box) return
-        const x = Math.max(0, Math.min(bitmapWidth, box.originX))
-        const y = Math.max(0, Math.min(bitmapHeight, box.originY))
-        const width = Math.max(0, Math.min(bitmapWidth - x, box.width))
-        const height = Math.max(0, Math.min(bitmapHeight - y, box.height))
-        if (width <= 0 || height <= 0) return
-        rects.push({ x, y, width, height })
-        scores.push(score)
-      })
     }
 
     const aiSuggestions = {
@@ -493,27 +499,16 @@ export default function ItemDetail() {
   }
 
   const handleApplySuggestions = () => {
-    const accepted = suggestions.filter((suggestion) => suggestion.included)
-    if (accepted.length === 0) {
+    const { rects: updatedRects, remaining, added } = applyFaceSuggestions(rects, suggestions)
+    if (added === 0) {
       setFaceDetectMessage('Select at least one suggested face to add.')
       return
     }
-    setRects((prev) => [...prev, ...accepted.map((suggestion) => suggestion.rect)])
-    setSuggestions((prev) => prev.filter((suggestion) => !suggestion.included))
+    setRects(updatedRects)
+    setSuggestions(remaining)
     setFaceDetectMessage(
-      `Added ${accepted.length} face${accepted.length === 1 ? '' : 's'} as editable rectangles.`,
+      `Added ${added} face${added === 1 ? '' : 's'} as editable rectangles.`,
     )
-  }
-
-  const hydrateStoredSuggestions = () => {
-    const storedBoxes = item?.aiSuggestions?.boxes ?? []
-    if (storedBoxes.length === 0) return []
-    return storedBoxes.map((rect, index) => ({
-      id: `stored-${item?.aiSuggestions?.detectedAt ?? 0}-${index}`,
-      rect,
-      score: 0,
-      included: true,
-    }))
   }
 
   const handleClearRects = () => {
@@ -526,12 +521,18 @@ export default function ItemDetail() {
     setPreviewMode('original')
     setShowRedactionOverlay(true)
     setRects(item?.redaction?.rects ?? [])
-    setSuggestions(hydrateStoredSuggestions())
+    setSuggestions(
+      hydrateFaceSuggestions(
+        item?.aiSuggestions?.boxes ?? [],
+        item?.aiSuggestions?.detectedAt,
+      ),
+    )
     setFaceDetectMessage('Image reset to original view.')
   }
 
   const canShowRedacted = Boolean(redactedUrl)
   const showingRedacted = previewMode === 'redacted'
+  const canDelete = Boolean(item)
 
   return (
     <div className="space-y-8">
@@ -672,46 +673,18 @@ export default function ItemDetail() {
                   !showingRedacted &&
                   showRedactionOverlay &&
                   suggestions.length > 0 && (
-                  <div className="space-y-2 rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/60 p-3 text-xs text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-900/20 dark:text-emerald-100">
-                    <p className="font-semibold uppercase tracking-[0.2em] text-[0.55rem]">
-                      Suggested faces
-                    </p>
-                    <div className="space-y-2">
-                      {suggestions.map((suggestion, index) => (
-                        <label
-                          key={suggestion.id}
-                          className="flex items-center gap-2 text-xs"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={suggestion.included}
-                            onChange={(event) => {
-                              const included = event.target.checked
-                              setSuggestions((prev) =>
-                                prev.map((entry) =>
-                                  entry.id === suggestion.id
-                                    ? { ...entry, included }
-                                    : entry
-                                )
-                              )
-                            }}
-                          />
-                          <span>
-                            Face {index + 1} · {Math.round(suggestion.score * 100)}%
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
-                      <Button variant="outline" onClick={handleApplySuggestions}>
-                        Add selected to redactions
-                      </Button>
-                      <span className="text-[0.6rem] text-emerald-800/80 dark:text-emerald-100/80">
-                        Converts suggestions into editable rectangles.
-                      </span>
-                    </div>
-                  </div>
-                )}
+                    <FaceSuggestionPanel
+                      suggestions={suggestions}
+                      onToggle={(id, included) =>
+                        setSuggestions((prev) =>
+                          prev.map((entry) =>
+                            entry.id === id ? { ...entry, included } : entry,
+                          )
+                        )
+                      }
+                      onApply={handleApplySuggestions}
+                    />
+                  )}
                 {item.type === 'photo' && showingRedacted && (
                   <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-500/40 dark:bg-amber-900/30 dark:text-amber-100">
                     Redaction is irreversible in exports unless you include originals.
@@ -724,6 +697,19 @@ export default function ItemDetail() {
                   <p className="text-xs text-emerald-700 dark:text-emerald-200">
                     {faceDetectMessage}
                   </p>
+                )}
+                {deleteMessage && (
+                  <p className="text-xs text-rose-600 dark:text-rose-400">{deleteMessage}</p>
+                )}
+                {canDelete && (
+                  <Button
+                    variant="ghost"
+                    className="text-rose-600 dark:text-rose-300"
+                    onClick={handleDeleteItem}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? 'Deleting…' : 'Delete item'}
+                  </Button>
                 )}
               </div>
             ) : (
