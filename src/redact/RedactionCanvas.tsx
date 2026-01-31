@@ -10,12 +10,23 @@ export type RedactionRect = {
 type Props = {
   imageUrl: string
   initialRects?: RedactionRect[]
+  suggestions?: SuggestedRedaction[]
   onChange?: (rects: RedactionRect[]) => void
+}
+
+export type SuggestedRedaction = {
+  rect: RedactionRect
+  included: boolean
 }
 
 const MIN_RECT_SIZE = 6
 
-export default function RedactionCanvas({ imageUrl, initialRects, onChange }: Props) {
+export default function RedactionCanvas({
+  imageUrl,
+  initialRects,
+  suggestions = [],
+  onChange,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const imageRef = useRef<HTMLImageElement | null>(null)
   const [rects, setRects] = useState<RedactionRect[]>([])
@@ -35,7 +46,7 @@ export default function RedactionCanvas({ imageUrl, initialRects, onChange }: Pr
       if (!canvas) return
       canvas.width = img.naturalWidth
       canvas.height = img.naturalHeight
-      draw(canvas, img, rects, draft)
+      draw(canvas, img, rects, draft, suggestions)
     }
   }, [imageUrl])
 
@@ -43,8 +54,8 @@ export default function RedactionCanvas({ imageUrl, initialRects, onChange }: Pr
     const canvas = canvasRef.current
     const img = imageRef.current
     if (!canvas || !img) return
-    draw(canvas, img, rects, draft)
-  }, [rects, draft])
+    draw(canvas, img, rects, draft, suggestions)
+  }, [rects, draft, suggestions])
 
   useEffect(() => {
     onChange?.(rects)
@@ -116,13 +127,30 @@ const draw = (
   canvas: HTMLCanvasElement,
   image: HTMLImageElement,
   rects: RedactionRect[],
-  draft: RedactionRect | null
+  draft: RedactionRect | null,
+  suggestions: SuggestedRedaction[]
 ) => {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
 
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
+
+  if (suggestions.length > 0) {
+    ctx.save()
+    ctx.setLineDash([8, 6])
+    ctx.lineWidth = 2
+    suggestions.forEach((suggestion) => {
+      const { rect, included } = suggestion
+      ctx.strokeStyle = included ? 'rgba(16, 120, 85, 0.9)' : 'rgba(120, 116, 110, 0.7)'
+      ctx.fillStyle = included ? 'rgba(16, 120, 85, 0.15)' : 'transparent'
+      if (included) {
+        ctx.fillRect(rect.x, rect.y, rect.width, rect.height)
+      }
+      ctx.strokeRect(rect.x, rect.y, rect.width, rect.height)
+    })
+    ctx.restore()
+  }
 
   ctx.save()
   ctx.fillStyle = 'rgba(20, 18, 16, 0.45)'

@@ -4,12 +4,20 @@ import Button from '../components/Button'
 import Card from '../components/Card'
 import { db, type CustodyEvent, type EvidenceItem } from '../db'
 import { decryptBlob, encryptBlob } from '../crypto/blob'
+import { detectFaces } from '../ai/faceDetector'
 import RedactionCanvas, { type RedactionRect } from '../redact/RedactionCanvas'
 import { pixelateImage } from '../redact/pixelate'
 import { appendCustodyEvent } from '../custody'
 import { useVault } from './VaultContext'
 
 type PreviewMode = 'original' | 'redacted'
+
+type FaceSuggestion = {
+  id: string
+  rect: RedactionRect
+  score: number
+  included: boolean
+}
 
 const formatEventTime = (timestamp: number) =>
   new Date(timestamp).toLocaleString(undefined, {
@@ -33,9 +41,12 @@ export default function ItemDetail() {
   const [isLoading, setIsLoading] = useState(true)
   const [rects, setRects] = useState<RedactionRect[]>([])
   const [redactionMessage, setRedactionMessage] = useState<string | null>(null)
+  const [faceDetectMessage, setFaceDetectMessage] = useState<string | null>(null)
+  const [isDetectingFaces, setIsDetectingFaces] = useState(false)
   const [isSavingRedaction, setIsSavingRedaction] = useState(false)
   const [previewMode, setPreviewMode] = useState<PreviewMode>('original')
   const [copiedHash, setCopiedHash] = useState<string | null>(null)
+  const [suggestions, setSuggestions] = useState<FaceSuggestion[]>([])
 
   useEffect(() => {
     let mounted = true
@@ -54,6 +65,8 @@ export default function ItemDetail() {
         setItem(record ?? null)
         setEvents(custody)
         setIsLoading(false)
+        setSuggestions([])
+        setFaceDetectMessage(null)
       }
     }
 
@@ -151,8 +164,13 @@ export default function ItemDetail() {
       setRedactionMessage('Preview not available yet.')
       return
     }
-    if (rects.length === 0) {
-      setRedactionMessage('Draw at least one rectangle to pixelate.')
+    const selectedSuggestionRects = suggestions
+      .filter((suggestion) => suggestion.included)
+      .map((suggestion) => suggestion.rect)
+    const selectedRects = [...rects, ...selectedSuggestionRects]
+
+    if (selectedRects.length === 0) {
+      setRedactionMessage('Select at least one rectangle to pixelate.')
       return
     }
 
@@ -160,7 +178,9 @@ export default function ItemDetail() {
       setIsSavingRedaction(true)
       setRedactionMessage(null)
 
-      const redactedBlob = await pixelateImage(previewUrl, rects, { mimeType: item.blobMime })
+      const redactedBlob = await pixelateImage(previewUrl, selectedRects, {
+        mimeType: item.blobMime,
+      })
       const encrypted = await encryptBlob(vaultKey, redactedBlob)
       const now = Date.now()
 
@@ -173,7 +193,7 @@ export default function ItemDetail() {
         redactedSize: encrypted.size,
         redaction: {
           method: 'pixelate',
-          rects,
+          rects: selectedRects,
           createdAt: now,
         },
       })
@@ -188,7 +208,7 @@ export default function ItemDetail() {
         redactedSize: encrypted.size,
         redaction: {
           method: 'pixelate' as const,
-          rects,
+          rects: selectedRects,
           createdAt: now,
         },
       }
@@ -203,7 +223,7 @@ export default function ItemDetail() {
         vaultKey,
         details: {
           method: 'pixelate',
-          rectCount: rects.length,
+          rectCount: selectedRects.length,
         },
       })
 
@@ -213,6 +233,82 @@ export default function ItemDetail() {
       setRedactionMessage('Unable to save redacted copy.')
     } finally {
       setIsSavingRedaction(false)
+    }
+  }
+
+  const handleAutoDetectFaces = async () => {
+    if (!item || item.type !== 'photo') return
+    if (!vaultKey) {
+      setFaceDetectMessage('Unlock the vault before running face detection.')
+      return
+    }
+
+    try {
+      setIsDetectingFaces(true)
+      setFaceDetectMessage(null)
+
+      const blob = await decryptBlob(vaultKey, {
+        nonce: item.encryptedBlob.nonce,
+        cipher: item.encryptedBlob.cipher,
+        mime: item.blobMime,
+        size: item.blobSize,
+      })
+
+      const bitmap = await createImageBitmap(blob)
+      const result = await detectFaces(bitmap, { basePath: '/mediapipe' })
+      const bitmapWidth = bitmap.width
+      const bitmapHeight = bitmap.height
+      bitmap.close?.()
+
+      const scoredDetections = result.detections
+        .map((detection, index) => {
+          const categoryScores = detection.categories.map((category) => category.score ?? 0)
+          const score = categoryScores.length ? Math.max(...categoryScores) : 0
+          const box = detection.boundingBox
+          if (!box) return null
+          const x = Math.max(0, Math.min(bitmapWidth, box.originX))
+          const y = Math.max(0, Math.min(bitmapHeight, box.originY))
+          const width = Math.max(0, Math.min(bitmapWidth - x, box.width))
+          const height = Math.max(0, Math.min(bitmapHeight - y, box.height))
+          return {
+            id: `face-${index}`,
+            rect: { x, y, width, height },
+            score,
+          }
+        })
+        .filter((entry): entry is { id: string; rect: RedactionRect; score: number } =>
+          Boolean(entry)
+        )
+
+      if (scoredDetections.length === 0) {
+        setSuggestions([])
+        setFaceDetectMessage('No faces detected.')
+        return
+      }
+
+      const formatted = scoredDetections
+        .map((detection) => `${Math.round(detection.score * 100)}%`)
+        .join(', ')
+
+      setSuggestions(
+        scoredDetections.map((detection) => ({
+          id: detection.id,
+          rect: detection.rect,
+          score: detection.score,
+          included: true,
+        }))
+      )
+
+      setFaceDetectMessage(
+        `Found ${scoredDetections.length} face${
+          scoredDetections.length === 1 ? '' : 's'
+        }. Confidences: ${formatted}. Review the suggested boxes below.`,
+      )
+    } catch (err) {
+      console.error(err)
+      setFaceDetectMessage('Unable to run face detection. Check that the model is available.')
+    } finally {
+      setIsDetectingFaces(false)
     }
   }
 
@@ -229,6 +325,8 @@ export default function ItemDetail() {
 
   const canShowRedacted = Boolean(redactedUrl)
   const showingRedacted = previewMode === 'redacted'
+  const selectedSuggestionCount = suggestions.filter((suggestion) => suggestion.included).length
+  const selectedRectCount = rects.length + selectedSuggestionCount
 
   return (
     <div className="space-y-8">
@@ -290,6 +388,10 @@ export default function ItemDetail() {
                   <RedactionCanvas
                     imageUrl={previewUrl}
                     initialRects={item.redaction?.rects}
+                    suggestions={suggestions.map((suggestion) => ({
+                      rect: suggestion.rect,
+                      included: suggestion.included,
+                    }))}
                     onChange={setRects}
                   />
                 )}
@@ -314,9 +416,49 @@ export default function ItemDetail() {
                     <Button onClick={saveRedacted} disabled={isSavingRedaction}>
                       {isSavingRedaction ? 'Saving…' : 'Save redacted copy'}
                     </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleAutoDetectFaces}
+                      disabled={isDetectingFaces}
+                    >
+                      {isDetectingFaces ? 'Detecting…' : 'Auto-detect faces'}
+                    </Button>
                     <span className="text-xs text-sand-600 dark:text-sand-400">
                       Pixelate the selected regions.
                     </span>
+                  </div>
+                )}
+                {item.type === 'photo' && !showingRedacted && suggestions.length > 0 && (
+                  <div className="space-y-2 rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/60 p-3 text-xs text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-900/20 dark:text-emerald-100">
+                    <p className="font-semibold uppercase tracking-[0.2em] text-[0.55rem]">
+                      Suggested faces
+                    </p>
+                    <div className="space-y-2">
+                      {suggestions.map((suggestion, index) => (
+                        <label
+                          key={suggestion.id}
+                          className="flex items-center gap-2 text-xs"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={suggestion.included}
+                            onChange={(event) => {
+                              const included = event.target.checked
+                              setSuggestions((prev) =>
+                                prev.map((entry) =>
+                                  entry.id === suggestion.id
+                                    ? { ...entry, included }
+                                    : entry
+                                )
+                              )
+                            }}
+                          />
+                          <span>
+                            Face {index + 1} · {Math.round(suggestion.score * 100)}%
+                          </span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
                 )}
                 {item.type === 'photo' && showingRedacted && (
@@ -326,6 +468,11 @@ export default function ItemDetail() {
                 )}
                 {redactionMessage && (
                   <p className="text-xs text-amber-700 dark:text-amber-200">{redactionMessage}</p>
+                )}
+                {faceDetectMessage && (
+                  <p className="text-xs text-emerald-700 dark:text-emerald-200">
+                    {faceDetectMessage}
+                  </p>
                 )}
               </div>
             ) : (
@@ -365,7 +512,7 @@ export default function ItemDetail() {
                 {item.type === 'photo' && (
                   <div>
                     <span className="font-semibold text-sand-900 dark:text-sand-50">Redactions:</span>{' '}
-                    {rects.length} region{rects.length === 1 ? '' : 's'}
+                    {selectedRectCount} region{selectedRectCount === 1 ? '' : 's'}
                   </div>
                 )}
                 {item.redactedBlob && (
