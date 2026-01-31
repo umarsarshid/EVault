@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import Button from '../components/Button'
+import Input from '../components/Input'
+import { unlockVault } from '../crypto/vault'
 import { useVault } from './VaultContext'
 
 type ThemeMode = 'light' | 'dark'
@@ -11,9 +13,8 @@ type BeforeInstallPromptEvent = Event & {
 }
 
 const navItems = [
-  { label: 'Landing', to: '/' },
+  { label: 'Home', to: '/' },
   { label: 'New vault', to: '/vault/new' },
-  { label: 'Unlock', to: '/vault/unlock' },
   { label: 'Vault', to: '/vault' },
   { label: 'Capture', to: '/capture' },
   { label: 'Testimony', to: '/testimony' },
@@ -34,14 +35,27 @@ const getInitialTheme = (): ThemeMode => {
 }
 
 export default function AppShell() {
-  const { vaultStatus, idleTimeoutMs, lockVault, isDemoMode, exitDemoMode, isSwitchingMode } =
-    useVault()
+  const {
+    vaultStatus,
+    idleTimeoutMs,
+    lockVault,
+    setVaultKey,
+    setVaultStatus,
+    resetIdleTimer,
+    isDemoMode,
+    exitDemoMode,
+    isSwitchingMode,
+  } = useVault()
   const isLocked = vaultStatus === 'locked'
   const idleMinutes = Math.round(idleTimeoutMs / 60000)
   const [theme, setTheme] = useState<ThemeMode>(() => getInitialTheme())
   const isDark = theme === 'dark'
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [isInstalled, setIsInstalled] = useState(false)
+  const [isUnlockOpen, setIsUnlockOpen] = useState(false)
+  const [passphrase, setPassphrase] = useState('')
+  const [unlockError, setUnlockError] = useState<string | null>(null)
+  const [isUnlocking, setIsUnlocking] = useState(false)
 
   useEffect(() => {
     const root = document.documentElement
@@ -94,6 +108,28 @@ export default function AppShell() {
     setInstallPrompt(null)
     if (typeof window !== 'undefined') {
       window.__evvaultInstallPrompt = null
+    }
+  }
+
+  const handleUnlock = async (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault()
+    if (!passphrase || isUnlocking) return
+
+    setUnlockError(null)
+    setIsUnlocking(true)
+
+    try {
+      const { vaultKey } = await unlockVault(passphrase)
+      setVaultKey(vaultKey)
+      setVaultStatus('unlocked')
+      resetIdleTimer()
+      setIsUnlockOpen(false)
+      setPassphrase('')
+    } catch (err) {
+      console.error(err)
+      setUnlockError('Incorrect passphrase or missing vault.')
+    } finally {
+      setIsUnlocking(false)
     }
   }
 
@@ -150,6 +186,15 @@ export default function AppShell() {
                 Quick lock
               </button>
             )}
+            {isLocked && (
+              <button
+                type="button"
+                className="rounded-full border border-dashed border-emerald-300/70 bg-emerald-50/80 px-3 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.22em] text-emerald-900 transition hover:-translate-y-0.5 hover:border-emerald-400 dark:border-emerald-500/60 dark:bg-emerald-900/30 dark:text-emerald-100 dark:hover:border-emerald-400"
+                onClick={() => setIsUnlockOpen(true)}
+              >
+                Unlock
+              </button>
+            )}
             <button
               type="button"
               className="rounded-full border border-dashed border-sand-400/70 bg-white/60 px-3 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.22em] text-sand-700 transition hover:-translate-y-0.5 hover:border-sand-500 dark:border-sand-700 dark:bg-sand-900/60 dark:text-sand-200 dark:hover:border-sand-500"
@@ -169,9 +214,6 @@ export default function AppShell() {
             </span>
             <span className="ev-hairline text-2xl font-semibold text-sand-900 dark:text-sand-50">
               Offline evidence workspace
-            </span>
-            <span className="text-xs text-sand-500 dark:text-sand-400">
-              Built for zero-connectivity capture and forensic-ready export.
             </span>
           </div>
           <nav className="no-scrollbar flex max-w-full items-center gap-2 overflow-x-auto rounded-full border border-dashed border-sand-300/70 bg-white/70 p-1 text-sand-700 shadow-[0_16px_32px_rgba(36,26,20,0.08)] dark:border-sand-700 dark:bg-sand-900/60 dark:text-sand-300">
@@ -224,6 +266,50 @@ export default function AppShell() {
       <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 ev-fade-up">
         <Outlet />
       </main>
+      {isUnlockOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-sand-900/40 px-4 py-6 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl border border-sand-200/70 bg-white/95 p-6 shadow-[0_24px_60px_rgba(36,26,20,0.22)] dark:border-sand-700/70 dark:bg-sand-900/90">
+            <div className="space-y-2">
+              <p className="ev-label text-[0.55rem] text-sand-500 dark:text-sand-400">
+                Quick unlock
+              </p>
+              <h2 className="text-xl font-semibold text-sand-900 dark:text-sand-50">
+                Unlock your vault
+              </h2>
+              <p className="text-xs text-sand-600 dark:text-sand-400">
+                Enter your passphrase to unlock without leaving your current screen.
+              </p>
+            </div>
+            <form className="mt-4 space-y-4" onSubmit={handleUnlock}>
+              <Input
+                type="password"
+                placeholder="Passphrase"
+                value={passphrase}
+                onChange={(event) => setPassphrase(event.target.value)}
+                autoFocus
+              />
+              {unlockError && (
+                <p className="text-xs text-rose-600 dark:text-rose-300">{unlockError}</p>
+              )}
+              <div className="flex flex-wrap gap-3">
+                <Button type="submit" disabled={!passphrase || isUnlocking}>
+                  {isUnlocking ? 'Unlocking…' : 'Unlock'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsUnlockOpen(false)
+                    setUnlockError(null)
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       <a
         href="https://buymeacoffee.com/umararshid"
         target="_blank"
