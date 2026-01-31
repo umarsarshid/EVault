@@ -481,15 +481,13 @@ export default function ItemDetail() {
       })
     }
 
-    if (rects.length > 0) {
-      const aiSuggestions = {
-        modelVersion: FACE_MODEL_VERSION,
-        detectedAt: Date.now(),
-        boxes: rects,
-      }
-      await db.items.update(item.id, { aiSuggestions })
-      setItem((prev) => (prev ? { ...prev, aiSuggestions } : prev))
+    const aiSuggestions = {
+      modelVersion: FACE_MODEL_VERSION,
+      detectedAt: Date.now(),
+      boxes: rects,
     }
+    await db.items.update(item.id, { aiSuggestions })
+    setItem((prev) => (prev ? { ...prev, aiSuggestions } : prev))
 
     return { rects, scores }
   }

@@ -53,6 +53,9 @@ automation or cloud features.
 - Runs on-device face detection in the browser (no server, no uploads).
 - Used only when the user requests it; suggestions must be accepted manually.
 - Detection runs in a worker to keep the UI responsive on lower-end devices.
+- Detection metadata (model version, timestamp, bounding boxes) is saved per item so the UI
+can reconstruct previous suggestions without rerunning the heavy detector. Only geometry is
+stored—never decrypted pixels.
 
 ## Why the export format looks the way it does
 

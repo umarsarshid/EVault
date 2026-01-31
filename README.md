@@ -75,6 +75,10 @@ The `predev` and `prebuild` steps run `pnpm run copy:mediapipe`, which copies th
 WASM files from `node_modules` into `public/mediapipe` so they keep stable filenames at
 runtime. Add your face detector `.task` model file to the same folder.
 
+Detection results are persisted per item under `aiSuggestions` (model version, detection
+timestamp, geometry) so the UI can rehydrate previous suggestions and avoid rerunning unless the
+user explicitly refreshes. Only bounding boxes are stored—never decrypted pixels.
+
 Face detection runs in a classic web worker (`public/workers/faceDetect.worker.js`) that
 loads `public/mediapipe/vision_bundle.cjs` via `importScripts`, keeping the main UI smooth.
 If the worker fails or finds zero faces, the app falls back to main-thread detection.
