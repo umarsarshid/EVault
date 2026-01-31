@@ -49,6 +49,11 @@ automation or cloud features.
 - Generates the service worker and manifest for installable offline use.
 - Provides reliable offline caching after the first load.
 
+### MediaPipe Tasks Vision (optional)
+- Runs on-device face detection in the browser (no server, no uploads).
+- Used only when the user requests it; suggestions must be accepted manually.
+- Detection runs in a worker to keep the UI responsive on lower-end devices.
+
 ## Why the export format looks the way it does
 
 - `manifest.json` + `manifest.csv` provide human- and machine-readable hashes.
@@ -59,7 +64,7 @@ automation or cloud features.
 ## Known limitations (by design)
 
 - No cloud sync or sharing in the MVP.
-- No automated face/plate detection.
+- No fully automatic redaction; face detection is optional and user-driven.
 - No disguised or covert modes.
 
 These choices keep the scope safe, audit-friendly, and appropriate for a free download.

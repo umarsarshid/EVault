@@ -25,9 +25,7 @@ const pending = new Map<number, PendingRequest>()
 
 const getWorker = () => {
   if (!worker) {
-    worker = new Worker(new URL('../workers/faceDetect.worker.ts', import.meta.url), {
-      type: 'classic',
-    })
+    worker = new Worker('/workers/faceDetect.worker.js', { type: 'classic' })
 
     worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
       const { id, rects, scores, error } = event.data

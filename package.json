@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "predev": "pnpm run copy:mediapipe",
     "build": "tsc && vite build",
     "prebuild": "pnpm run copy:mediapipe",
     "copy:mediapipe": "node scripts/copy-mediapipe.mjs",

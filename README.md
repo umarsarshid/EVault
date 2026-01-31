@@ -71,9 +71,13 @@ detector model) and load them via MediaPipe’s `FilesetResolver.forVisionTasks`
 `/mediapipe`. This avoids third-party CDNs, keeps everything cacheable by the PWA, and stays
 compatible with COOP/COEP when enabled.
 
-The `prebuild` step runs `pnpm run copy:mediapipe`, which copies the MediaPipe WASM files from
-`node_modules` into `public/mediapipe` so they keep stable filenames at runtime. Add your
-face detector `.task` model file to the same folder.
+The `predev` and `prebuild` steps run `pnpm run copy:mediapipe`, which copies the MediaPipe
+WASM files from `node_modules` into `public/mediapipe` so they keep stable filenames at
+runtime. Add your face detector `.task` model file to the same folder.
+
+Face detection runs in a classic web worker (`public/workers/faceDetect.worker.js`) that
+loads `public/mediapipe/vision_bundle.cjs` via `importScripts`, keeping the main UI smooth.
+If the worker fails or finds zero faces, the app falls back to main-thread detection.
 
 ## What this app is / isn't
 
@@ -85,7 +89,7 @@ face detector `.task` model file to the same folder.
 **This app is not:**
 - A cloud backup or sharing service.
 - A stealth or disguise tool.
-- An automatic redaction or face-detection product.
+- A fully automatic redaction product (face detection is optional and user-driven).
 - A guaranteed legal safe harbor.
 
 ## Threat model (MVP)
