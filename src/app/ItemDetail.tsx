@@ -15,9 +15,9 @@ import {
   applyFaceSuggestions,
   clampRedactionRects,
   convertDetectionsToRects,
-  FaceSuggestion,
   hydrateFaceSuggestions,
 } from './faceSuggestions'
+import type { FaceSuggestion } from './faceSuggestions'
 
 type PreviewMode = 'original' | 'redacted'
 

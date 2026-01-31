@@ -5,14 +5,14 @@
 @layer base {
   :root {
     color-scheme: light;
-    --ev-paper: #f7f1e5;
-    --ev-paper-strong: #eadfce;
-    --ev-ink: #241a14;
-    --ev-ink-muted: #6f6157;
-    --ev-accent: #c2542f;
-    --ev-accent-strong: #8e3a1f;
-    --ev-line: rgba(36, 26, 20, 0.08);
-    --ev-glow: rgba(194, 84, 47, 0.18);
+    --ev-paper: #181c2a;
+    --ev-paper-strong: #0f1220;
+    --ev-ink: #f3f6ff;
+    --ev-ink-muted: #a0a7c4;
+    --ev-accent: #0f172a;
+    --ev-accent-strong: #1d4ed8;
+    --ev-line: rgba(5, 10, 20, 0.65);
+    --ev-glow: rgba(59, 130, 246, 0.55);
     font-family: "IBM Plex Serif", "Space Grotesk", serif;
     color: var(--ev-ink);
     background-color: var(--ev-paper);
@@ -24,14 +24,14 @@
 
   html.dark {
     color-scheme: dark;
-    --ev-paper: #0f0b08;
-    --ev-paper-strong: #1a1410;
-    --ev-ink: #f6efe6;
-    --ev-ink-muted: #b9aca0;
-    --ev-accent: #e28f64;
-    --ev-accent-strong: #f0b08a;
-    --ev-line: rgba(246, 239, 230, 0.08);
-    --ev-glow: rgba(226, 143, 100, 0.18);
+    --ev-paper: #010b19;
+    --ev-paper-strong: #051226;
+    --ev-ink: #e2ebff;
+    --ev-ink-muted: #94a3b8;
+    --ev-accent: #22d3ee;
+    --ev-accent-strong: #06b6d4;
+    --ev-line: rgba(226, 239, 255, 0.2);
+    --ev-glow: rgba(14, 165, 233, 0.25);
   }
 
   *,
@@ -45,10 +45,10 @@
     min-height: 100vh;
     background-color: var(--ev-paper);
     background-image:
-      linear-gradient(0deg, rgba(36, 26, 20, 0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(36, 26, 20, 0.03) 1px, transparent 1px),
-      radial-gradient(circle at 18% 10%, rgba(255, 255, 255, 0.7) 0%, transparent 45%),
-      radial-gradient(circle at 78% 5%, rgba(194, 84, 47, 0.12) 0%, transparent 50%);
+      linear-gradient(0deg, rgba(5, 10, 20, 0.35) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(5, 10, 20, 0.32) 1px, transparent 1px),
+      radial-gradient(circle at 18% 10%, rgba(255, 255, 255, 0.18) 0%, transparent 25%),
+      radial-gradient(circle at 78% 5%, rgba(59, 130, 246, 0.5) 0%, transparent 35%);
     background-size: 48px 48px, 48px 48px, auto, auto;
     background-attachment: fixed;
     position: relative;

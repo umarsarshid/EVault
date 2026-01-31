@@ -6,19 +6,12 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
       injectRegister: 'auto',
       registerType: 'autoUpdate',
-      includeAssets: [
-        'vite.svg',
-        'icons/evvault-icon.svg',
-        'icons/evvault-icon-maskable.svg',
-        'mediapipe/vision_bundle.cjs',
-        'mediapipe/vision_wasm_internal.js',
-        'mediapipe/vision_wasm_internal.wasm',
-        'mediapipe/vision_wasm_nosimd_internal.js',
-        'mediapipe/vision_wasm_nosimd_internal.wasm',
-        'mediapipe/face_detector.task',
-      ],
+      includeAssets: ['vite.svg', 'icons/evvault-icon.svg', 'icons/evvault-icon-maskable.svg'],
       manifest: {
         name: 'Evidence Vault',
         short_name: 'EvidenceVault',
@@ -44,31 +37,16 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: '/index.html',
-        globPatterns: ['**/*.{js,css,html,svg,ico,png,wasm,cjs,task}'],
-        runtimeCaching: [
-          {
-            urlPattern: ({ request }) => request.destination === 'image',
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'evv-images',
-              expiration: {
-                maxEntries: 60,
-                maxAgeSeconds: 60 * 60 * 24 * 30,
-              },
-            },
-          },
-          {
-            urlPattern: ({ request }) => request.destination === 'document',
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'evv-docs',
-              expiration: {
-                maxEntries: 20,
-                maxAgeSeconds: 60 * 60 * 24 * 7,
-              },
-            },
-          },
-        ],
+        globPatterns: ['**/*.{js,css,html,svg,ico,png}'],
+        globIgnores: ['mediapipe/**'],
+      },
+      injectManifest: {
+        swSrc: 'src/sw.ts',
+        swDest: 'dist/sw.js',
+        injectionPoint: 'self.__WB_MANIFEST',
+      },
+      injectManifestBuildOptions: {
+        minify: false,
       },
     }),
   ],

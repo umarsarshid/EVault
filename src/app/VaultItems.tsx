@@ -91,13 +91,11 @@ export default function VaultItems() {
       </header>
 
       {vaultStatus === 'locked' ? (
-        <Card
-          title="Vault locked"
-          description="Unlock the vault first to view decrypted items."
-          footer={
+        <Card title="Vault locked" description="Unlock the vault first to view decrypted items.">
+          <div className="mt-4">
             <Button onClick={() => navigate('/')}>Unlock vault</Button>
-          }
-        />
+          </div>
+        </Card>
       ) : (
         <Card title={`${filteredItems.length} item${filteredItems.length === 1 ? '' : 's'}`}>
           <div className="space-y-4">

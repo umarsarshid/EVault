@@ -75,8 +75,8 @@ The `predev` and `prebuild` steps run `pnpm run copy:mediapipe`, which copies th
 WASM files from `node_modules` into `public/mediapipe` so they keep stable filenames at
 runtime. Add your face detector `.task` model file to the same folder.
 
-The PWA service worker precaches those files (and the `.task` model), so once the app has
-loaded them online, the face detector keeps working offline. To verify, load the app while
+The PWA service worker caches those files the first time they're requested, so once you run
+face detection online the assets stay available offline. To verify, load the app while
 connected, run auto-detect once, then switch to airplane mode/offline and rerun detection;
 the cached MediaPipe assets should still load.
 
